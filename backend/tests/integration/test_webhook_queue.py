@@ -102,8 +102,8 @@ class TestWebhookQueue:
             }
         })
         
-        # Mock database operations
-        with patch('app.services.webhook.process_message_received') as mock_process:
+        # Mock database operations - use sync version for Celery tasks
+        with patch('app.services.webhook_sync.process_message_received_sync') as mock_process:
             mock_process.return_value = {"status": "processed"}
             
             # Execute Celery task
@@ -124,10 +124,10 @@ class TestWebhookQueue:
         from app.worker import process_openphone_webhook
         
         test_cases = [
-            ("message.received", "app.services.webhook.process_message_received"),
-            ("message.delivered", "app.services.webhook.process_message_delivered"), 
-            ("call.completed", "app.services.webhook.process_call_completed"),
-            ("voicemail.received", "app.services.webhook.process_voicemail_received")
+            ("message.received", "app.services.webhook_sync.process_message_received_sync"),
+            ("message.delivered", "app.services.webhook_sync.process_message_delivered_sync"), 
+            ("call.completed", "app.services.webhook_sync.process_call_completed_sync"),
+            ("voicemail.received", "app.services.webhook_sync.process_voicemail_received_sync")
         ]
         
         for event_type, handler_path in test_cases:
@@ -155,7 +155,7 @@ class TestWebhookQueue:
         })
         
         # Mock processing to fail first time, succeed second time
-        with patch('app.services.webhook.process_message_received') as mock_process:
+        with patch('app.services.webhook_sync.process_message_received_sync') as mock_process:
             mock_process.side_effect = [
                 Exception("Database connection failed"),
                 {"status": "processed"}  # Success on retry
@@ -255,7 +255,7 @@ class TestWebhookQueue:
             "data": {"messageId": "mark_processed_test"}
         })
         
-        with patch('app.services.webhook.process_message_received', return_value={"status": "processed"}):
+        with patch('app.services.webhook_sync.process_message_received_sync', return_value={"status": "processed"}):
             result = process_openphone_webhook(webhook_data)
             
             # Should return processed status
@@ -274,7 +274,7 @@ class TestWebhookQueue:
         error_message = "Processing failed due to validation error"
         
         # Test that processing error triggers retry mechanism
-        with patch('app.services.webhook.process_message_received', side_effect=Exception(error_message)):
+        with patch('app.services.webhook_sync.process_message_received_sync', side_effect=Exception(error_message)):
             # Should trigger retry which raises Retry exception
             # The Retry exception gets wrapped/re-raised, so we catch the base Exception
             with pytest.raises((Retry, Exception)) as exc_info:
@@ -296,7 +296,7 @@ class TestWebhookQueue:
             }
         })
         
-        with patch('app.services.webhook.process_message_received') as mock_process:
+        with patch('app.services.webhook_sync.process_message_received_sync') as mock_process:
             # First call processes normally
             mock_process.return_value = {"status": "processed"}
             result1 = process_openphone_webhook(duplicate_webhook_data)
@@ -321,7 +321,7 @@ class TestWebhookQueue:
             "data": {"messageId": "logging_test"}
         })
         
-        with patch('app.services.webhook.process_message_received', return_value={"status": "processed"}):
+        with patch('app.services.webhook_sync.process_message_received_sync', return_value={"status": "processed"}):
             with patch('app.worker.logger') as mock_logger:
                 
                 result = process_openphone_webhook(webhook_data)

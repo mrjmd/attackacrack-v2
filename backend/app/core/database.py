@@ -8,7 +8,8 @@ Following database specialist patterns for connection pooling and transaction ma
 import os
 from typing import AsyncGenerator
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, Session
 from sqlalchemy.pool import StaticPool
 
 
@@ -37,7 +38,7 @@ engine = create_async_engine(
     } if "sqlite" in DATABASE_URL else {},
 )
 
-# Session factory with proper configuration
+# Async session factory with proper configuration
 SessionLocal = sessionmaker(
     engine,
     class_=AsyncSession,
@@ -45,6 +46,49 @@ SessionLocal = sessionmaker(
     autoflush=True,          # Auto-flush before queries
     autocommit=False,        # Explicit transaction control
 )
+
+# Sync engine and session factory for Celery tasks
+# Created lazily to ensure test environment is properly set up
+_sync_engine = None
+_sync_session_factory = None
+
+def get_sync_engine():
+    """Get or create the sync database engine."""
+    global _sync_engine
+    if _sync_engine is None:
+        # Check for TEST_DATABASE_URL in tests, otherwise use regular DATABASE_URL
+        if os.getenv("TEST_DATABASE_URL"):
+            # In tests, use the test database for sync connections
+            sync_database_url = os.getenv("TEST_DATABASE_URL").replace('+asyncpg', '+psycopg2')
+        else:
+            sync_database_url = DATABASE_URL.replace('+asyncpg', '+psycopg2') if '+asyncpg' in DATABASE_URL else DATABASE_URL
+        
+        _sync_engine = create_engine(
+            sync_database_url,
+            echo=os.getenv("DEBUG", "false").lower() == "true",
+            pool_pre_ping=True,
+            pool_recycle=3600,
+            pool_size=5,
+            max_overflow=10,
+            poolclass=StaticPool if "sqlite" in sync_database_url else None,
+            connect_args={
+                "check_same_thread": False,
+            } if "sqlite" in sync_database_url else {},
+        )
+    return _sync_engine
+
+def get_sync_session_factory():
+    """Get or create the sync session factory."""
+    global _sync_session_factory
+    if _sync_session_factory is None:
+        _sync_session_factory = sessionmaker(
+            get_sync_engine(),
+            class_=Session,
+            expire_on_commit=False,
+            autoflush=True,
+            autocommit=False,
+        )
+    return _sync_session_factory
 
 
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
@@ -64,6 +108,17 @@ async def get_db() -> AsyncGenerator[AsyncSession, None]:
         finally:
             # Session cleanup happens automatically via context manager
             pass
+
+
+def get_sync_db() -> Session:
+    """
+    Get a synchronous database session for Celery tasks.
+    
+    Returns a sync session that must be manually closed.
+    Used by Celery tasks which run in sync context.
+    """
+    SyncSessionLocal = get_sync_session_factory()
+    return SyncSessionLocal()
 
 
 async def init_db() -> None:

@@ -47,13 +47,14 @@ def test_environment():
     # Set test environment
     os.environ["ENVIRONMENT"] = "test"
     os.environ["DATABASE_URL"] = "postgresql+asyncpg://attackacrack:attackacrack_password@db:5432/attackacrack_test"
+    os.environ["TEST_DATABASE_URL"] = "postgresql+asyncpg://attackacrack:attackacrack_password@db:5432/attackacrack_test"
     os.environ["CORS_ORIGINS"] = "http://localhost:3000,http://localhost:5173"
     os.environ["DEBUG"] = "true"
     
     yield
     
     # Cleanup environment
-    test_vars = ["ENVIRONMENT", "DATABASE_URL", "CORS_ORIGINS", "DEBUG"]
+    test_vars = ["ENVIRONMENT", "DATABASE_URL", "TEST_DATABASE_URL", "CORS_ORIGINS", "DEBUG"]
     for var in test_vars:
         os.environ.pop(var, None)
 
