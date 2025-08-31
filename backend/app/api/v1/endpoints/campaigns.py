@@ -53,15 +53,24 @@ async def list_campaigns(
 
 @router.get("/{campaign_id}", response_model=CampaignResponse)
 async def get_campaign(
-    campaign_id: UUID,
+    campaign_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> CampaignResponse:
     """Get single campaign by ID."""
     
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
+    
     campaign_service = CampaignService(db)
     
-    campaign = await campaign_service.get_campaign(campaign_id, current_user.id)
+    campaign = await campaign_service.get_campaign(campaign_uuid, current_user.id)
     
     if not campaign:
         raise HTTPException(
@@ -94,18 +103,27 @@ async def create_campaign(
 
 @router.put("/{campaign_id}", response_model=CampaignResponse)
 async def update_campaign(
-    campaign_id: UUID,
+    campaign_id: str,
     campaign_data: CampaignUpdate,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> CampaignResponse:
     """Update an existing campaign."""
     
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
+    
     campaign_service = CampaignService(db)
     
     try:
         campaign = await campaign_service.update_campaign(
-            campaign_id, campaign_data, current_user.id
+            campaign_uuid, campaign_data, current_user.id
         )
         
         if not campaign:
@@ -125,16 +143,25 @@ async def update_campaign(
 
 @router.delete("/{campaign_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_campaign(
-    campaign_id: UUID,
+    campaign_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ):
     """Delete a campaign."""
     
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
+    
     campaign_service = CampaignService(db)
     
     try:
-        deleted = await campaign_service.delete_campaign(campaign_id, current_user.id)
+        deleted = await campaign_service.delete_campaign(campaign_uuid, current_user.id)
         
         if not deleted:
             raise HTTPException(
@@ -151,19 +178,28 @@ async def delete_campaign(
 
 @router.post("/{campaign_id}/contacts", response_model=ContactAddResponse, status_code=status.HTTP_201_CREATED)
 async def add_contacts_to_campaign(
-    campaign_id: UUID,
+    campaign_id: str,
     contacts_data: CampaignContactsAdd,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ContactAddResponse:
     """Add contacts to a campaign."""
     
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
+    
     campaign_service = CampaignService(db)
     
     try:
         contacts_list = [contact.model_dump() for contact in contacts_data.contacts]
         result = await campaign_service.add_contacts_to_campaign(
-            campaign_id, contacts_list, current_user.id
+            campaign_uuid, contacts_list, current_user.id
         )
         
         return ContactAddResponse(**result)
@@ -177,13 +213,22 @@ async def add_contacts_to_campaign(
 
 @router.get("/{campaign_id}/contacts", response_model=CampaignContactsResponse)
 async def list_campaign_contacts(
-    campaign_id: UUID,
+    campaign_id: str,
     page: int = 1,
     per_page: int = 10,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> CampaignContactsResponse:
     """List contacts for a campaign."""
+    
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
     
     # Validate per_page limit
     per_page = min(per_page, 100)
@@ -192,7 +237,7 @@ async def list_campaign_contacts(
     
     try:
         result = await campaign_service.list_campaign_contacts(
-            campaign_id, current_user.id, page, per_page
+            campaign_uuid, current_user.id, page, per_page
         )
         
         return CampaignContactsResponse(**result)
@@ -206,12 +251,21 @@ async def list_campaign_contacts(
 
 @router.post("/{campaign_id}/contacts/import", response_model=ContactImportResponse, status_code=status.HTTP_201_CREATED)
 async def import_contacts_csv(
-    campaign_id: UUID,
+    campaign_id: str,
     file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> ContactImportResponse:
     """Import contacts from CSV file."""
+    
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
     
     # Validate file type
     if not file.filename or not file.filename.endswith('.csv'):
@@ -224,7 +278,7 @@ async def import_contacts_csv(
     
     try:
         result = await campaign_service.import_contacts_from_csv(
-            campaign_id, file, current_user.id
+            campaign_uuid, file, current_user.id
         )
         
         return ContactImportResponse(**result)
@@ -238,16 +292,25 @@ async def import_contacts_csv(
 
 @router.post("/{campaign_id}/send", response_model=CampaignSendResponse, status_code=status.HTTP_202_ACCEPTED)
 async def send_campaign(
-    campaign_id: UUID,
+    campaign_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> CampaignSendResponse:
     """Trigger campaign message sending."""
     
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
+    
     campaign_service = CampaignService(db)
     
     try:
-        result = await campaign_service.send_campaign(campaign_id, current_user.id)
+        result = await campaign_service.send_campaign(campaign_uuid, current_user.id)
         return CampaignSendResponse(**result)
         
     except ValueError as e:
@@ -264,16 +327,25 @@ async def send_campaign(
 
 @router.get("/{campaign_id}/stats", response_model=CampaignStatsResponse)
 async def get_campaign_stats(
-    campaign_id: UUID,
+    campaign_id: str,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user)
 ) -> CampaignStatsResponse:
     """Get campaign statistics."""
     
+    # Validate UUID format
+    try:
+        campaign_uuid = UUID(campaign_id)
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid campaign ID format"
+        )
+    
     campaign_service = CampaignService(db)
     
     try:
-        result = await campaign_service.get_campaign_stats(campaign_id, current_user.id)
+        result = await campaign_service.get_campaign_stats(campaign_uuid, current_user.id)
         return CampaignStatsResponse(**result)
         
     except ValueError as e:

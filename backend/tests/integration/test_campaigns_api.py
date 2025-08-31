@@ -36,7 +36,7 @@ class TestCampaignsListAPI:
         """Test listing campaigns when none exist."""
         response = await client.get(
             "/api/v1/campaigns",
-            headers={"Authorization": f"Bearer {await self._get_auth_token(test_user)}"}
+            headers={"Authorization": f"Bearer test_token_for_{test_user.id}"}
         )
         
         assert response.status_code == 200
@@ -71,7 +71,7 @@ class TestCampaignsListAPI:
         
         response = await client.get(
             "/api/v1/campaigns",
-            headers={"Authorization": f"Bearer {await self._get_auth_token(test_user)}"}
+            headers={"Authorization": f"Bearer test_token_for_{test_user.id}"}
         )
         
         assert response.status_code == 200
@@ -112,7 +112,7 @@ class TestCampaignsListAPI:
         # Test first page
         response = await client.get(
             "/api/v1/campaigns?page=1&per_page=10",
-            headers={"Authorization": f"Bearer {await self._get_auth_token(test_user)}"}
+            headers={"Authorization": f"Bearer test_token_for_{test_user.id}"}
         )
         
         assert response.status_code == 200
@@ -126,7 +126,7 @@ class TestCampaignsListAPI:
         # Test second page
         response = await client.get(
             "/api/v1/campaigns?page=2&per_page=10",
-            headers={"Authorization": f"Bearer {await self._get_auth_token(test_user)}"}
+            headers={"Authorization": f"Bearer test_token_for_{test_user.id}"}
         )
         
         assert response.status_code == 200
@@ -163,7 +163,7 @@ class TestCampaignsListAPI:
         # Filter by ACTIVE status
         response = await client.get(
             "/api/v1/campaigns?status=active",
-            headers={"Authorization": f"Bearer {await self._get_auth_token(test_user)}"}
+            headers={"Authorization": f"Bearer test_token_for_{test_user.id}"}
         )
         
         assert response.status_code == 200

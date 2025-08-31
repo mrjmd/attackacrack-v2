@@ -303,7 +303,10 @@ class CampaignService:
             raise ValueError("Campaign not found")
         
         if campaign.status != CampaignStatus.ACTIVE:
-            raise ValueError("Only active campaigns can be sent")
+            if campaign.status == CampaignStatus.DRAFT:
+                raise ValueError("Cannot send draft campaigns")
+            else:
+                raise ValueError("Only active campaigns can be sent")
         
         # Check business hours (9am-6pm ET)
         now = datetime.now()
@@ -339,13 +342,13 @@ class CampaignService:
             func.count(Message.id).filter(Message.status == MsgStatus.SENT).label("sent"),
             func.count(Message.id).filter(Message.status == MsgStatus.DELIVERED).label("delivered"),
             func.count(Message.id).filter(Message.status == MsgStatus.FAILED).label("failed"),
-            func.count(Message.id).filter(Message.status.in_([MsgStatus.QUEUED, "pending"])).label("pending")
+            func.count(Message.id).filter(Message.status == MsgStatus.QUEUED).label("pending")
         ).where(Message.campaign_id == campaign_id)
         
         result = await self.db.execute(stats_query)
         stats = result.first()
         
-        # Get total contacts count
+        # Get total contacts count for this campaign (all user contacts for now)
         total_contacts_query = select(func.count(Contact.id)).where(Contact.user_id == user_id)
         total_contacts = await self.db.scalar(total_contacts_query) or 0
         

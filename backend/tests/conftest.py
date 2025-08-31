@@ -138,6 +138,8 @@ async def db_engine():
         from app.models import User, Contact, Campaign, Message, WebhookEvent
         
         async with engine.begin() as conn:
+            # Drop all tables first to ensure clean state
+            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
     except ImportError:
         # Models don't exist yet - this is expected in RED phase
