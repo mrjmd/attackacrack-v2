@@ -1,5 +1,6 @@
 #!/bin/bash
-# persist-todos.sh - Save todos to disk with history tracking
+# persist-todos.sh - Basic history tracking for todos
+# Note: This cannot capture TodoWrite data - use todo-manager agent instead
 
 TODOS_DIR=".claude/todos"
 HISTORY_DIR=".claude/todos/history"
@@ -18,13 +19,8 @@ if [ -f "$CURRENT_FILE" ]; then
     echo "---" >> "$HISTORY_FILE"
     echo "### Snapshot at $(date +"%H:%M:%S")" >> "$HISTORY_FILE"
     cat "$CURRENT_FILE" >> "$HISTORY_FILE"
-fi
-
-# Create new current file with actual content if available
-# This would normally be populated by the TodoWrite tool
-if [ -f "$CURRENT_FILE" ]; then
-    # Keep the existing content and just update timestamp
-    sed -i.bak "1s/.*/# Current Todo List/" "$CURRENT_FILE"
+    
+    # Just update timestamp in current file
     sed -i.bak "2s/.*/*Last updated: $(date)*/" "$CURRENT_FILE"
 else
     # Create new template
@@ -33,18 +29,17 @@ else
 *Last updated: $(date)*
 
 ## 🚀 Working On
-- [in_progress] Improve todo persistence with historical tracking
-
-## ✅ Completed Today
+Nothing currently - all tasks completed!
 
 ## 📋 Pending
-- Implement celery-task-specialist agent
-- Implement webhook-processing-specialist agent
-- Implement docker-compose-specialist agent
+- Initialize FastAPI project structure
+- Set up PostgreSQL schema with Alembic
+- Implement OpenPhone webhook receiver with queue
+- Configure Celery with Redis for async processing
 
 ## 📝 Session Notes
 - Session started: $(date)
-- Context: Setting up TDD enforcement and agent system
+- Context: Docker environment setup complete
 EOF
 fi
 

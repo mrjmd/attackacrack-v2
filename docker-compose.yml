@@ -1,0 +1,118 @@
+# docker-compose.yml - Attack-a-Crack v2 Development Environment
+
+services:
+  backend:
+    build: ./backend
+    container_name: attackacrack_backend
+    env_file:
+      - .env
+      - .env.local
+    ports:
+      - "8000:8000"
+    expose:
+      - 8000
+    volumes:
+      - ./backend:/app
+    command: ["/app/entrypoint.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build: ./frontend
+    container_name: attackacrack_frontend
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+      - VITE_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  db:
+    image: postgres:15-alpine
+    container_name: attackacrack_database
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    ports:
+      - "5432:5432"
+    expose:
+      - 5432
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: attackacrack_redis
+    volumes:
+      - redis_data:/data
+    ports:
+      - "6379:6379"
+    expose:
+      - 6379
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  celery:
+    build: ./backend
+    container_name: attackacrack_celery_worker
+    command: ["celery", "-A", "app.worker", "worker", "--loglevel=info", "--pool=solo"]
+    env_file:
+      - .env
+      - .env.local
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+  celery-beat:
+    build: ./backend
+    container_name: attackacrack_celery_beat
+    command: ["celery", "-A", "app.worker", "beat", "--loglevel=info"]
+    env_file:
+      - .env
+      - .env.local
+    volumes:
+      - ./backend:/app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - PYTHONUNBUFFERED=1
+
+volumes:
+  postgres_data:
+  redis_data:

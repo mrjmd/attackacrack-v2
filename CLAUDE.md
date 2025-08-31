@@ -11,15 +11,20 @@
 
 ## 🚨 MANDATORY AGENT-BASED TDD WORKFLOW 🚨
 
-### ⚠️ AUTOMATIC WORKFLOW - NO MANUAL INTERVENTION ⚠️
+### ⚠️ AUTOMATIC WORKFLOW - ENFORCED BY HOOKS ⚠️
 
 **EVERY feature request MUST automatically trigger this workflow:**
 
-1. **todo-manager agent** → Track task and persist to disk
+1. **todo-manager agent** → Track task and persist to disk (BLOCKS code without this!)
 2. **tdd-enforcer agent** → Write comprehensive tests FIRST
 3. **test-handoff agent** → Create implementation specification
 4. **[specialist] agent** → Implement to pass tests
 5. **playwright-test-specialist** → Validate in browser with screenshot
+
+**ENFORCEMENT HOOKS ACTIVE:**
+- **enforce-todo-tracking.sh** - BLOCKS Write/Edit if todo-manager not invoked in last 5 minutes
+- **check-test-first.sh** - BLOCKS Write if no test exists for the code
+- Todo tracking is MANDATORY - you cannot write code without it
 
 **You are NOT ALLOWED to:**
 - Write code directly without using agents

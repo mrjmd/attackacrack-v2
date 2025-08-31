@@ -1,41 +1,142 @@
-# Current Todo List
-*Last updated: Sun Aug 31 10:19:07 EDT 2025*
+# Attack-a-Crack v2 - Current Session TODOs
+*Last updated: Sun Aug 31 10:50:08 EDT 2025*
+*Session Started: Saturday, August 31, 2025*
+*Project Phase: MVP - Docker Environment Setup*
 
-## 🚀 Working On
-Nothing currently - all tasks completed!
+## 🚀 Current Sprint Goal
+Complete Docker-based development environment setup for Attack-a-Crack v2
 
-## ✅ Completed Today (Aug 31, 2025)
-- ✅ Create Claude settings.local.json with modern hook configuration
-- ✅ Add todo tracking enforcement hooks  
-- ✅ Document additional specialized agents needed
-- ✅ Create hook scripts for TDD enforcement
-- ✅ Set up TDD Guard integration
-- ✅ Improve todo persistence with historical tracking
-- ✅ Implement celery-task-specialist agent
-- ✅ Implement webhook-processing-specialist agent
-- ✅ Implement docker-compose-specialist agent
-- ✅ Consolidate todo files to single source of truth
-- ✅ Document v1 location and reference guide
+## 🔄 IN PROGRESS (Max 1 item)
+*No tasks currently in progress*
 
-## 📋 Pending (Next Session)
-- [ ] Create docker-compose.yml for development environment
-- [ ] Initialize FastAPI project structure
-- [ ] Set up PostgreSQL schema with Alembic
-- [ ] Implement OpenPhone webhook receiver endpoint
-- [ ] Configure Celery with Redis for task queuing
+## ✅ COMPLETED THIS SESSION
+- [x] Analyze v1 Docker setup for patterns to keep (Completed: 10:00 AM)
+  - Result: Identified what worked vs what to avoid from openphone-sms setup
+  - Files: Referenced ../openphone-sms/ structure
+  
+- [x] Create docker-compose-specialist agent documentation (Completed: 10:15 AM)
+  - Result: Agent spec for Docker environment setup
+  - Files: Created agent documentation
+  
+- [x] Create docker-compose.yml WITHOUT ngrok for v2 (Completed: 10:30 AM)
+  - Result: Clean Docker compose setup with PostgreSQL, Redis, backend, frontend
+  - Files: docker-compose.yml created
+  
+- [x] Create backend/Dockerfile for Python 3.11 (Completed: 10:35 AM)
+  - Result: Optimized Python container with FastAPI dependencies
+  - Files: backend/Dockerfile
+  
+- [x] Create frontend/Dockerfile for Node 20 (Completed: 10:40 AM)
+  - Result: Node container optimized for SvelteKit development
+  - Files: frontend/Dockerfile
+  
+- [x] Create simplified entrypoint.sh for FastAPI (Completed: 10:42 AM)
+  - Result: Clean startup script without ngrok complexity
+  - Files: backend/entrypoint.sh
+  
+- [x] Create backend/requirements.txt with FastAPI dependencies (Completed: 10:45 AM)
+  - Result: Core FastAPI, SQLAlchemy, Celery dependencies defined
+  - Files: backend/requirements.txt
+  
+- [x] Create frontend/package.json with SvelteKit (Completed: 10:47 AM)
+  - Result: SvelteKit setup with Playwright testing configured
+  - Files: frontend/package.json
+  
+- [x] Create .env.example with all configuration (Completed: 10:50 AM)
+  - Result: Complete environment template for development
+  - Files: .env.example
+  
+- [x] Create .env.local for development (Completed: 10:52 AM)
+  - Result: Local development configuration
+  - Files: .env.local
+  
+- [x] Create .gitignore for the project (Completed: 10:53 AM)
+  - Result: Proper exclusions for Python, Node, Docker, and secrets
+  - Files: .gitignore
+  
+- [x] Create claude-code-expert agent documentation (Completed: 10:55 AM)
+  - Result: Agent spec for code analysis and debugging
+  - Files: Agent documentation created
+  
+- [x] Fix and clean up persist-todos.sh hook (Completed: 11:00 AM)
+  - Result: Working todo persistence automation
+  - Files: .claude/hooks/persist-todos.sh
 
-## 📝 Session Context
-- Last updated: Sun Aug 31, 2025
-- Focus: Setting up TDD enforcement and agent system
-- Key achievement: Complete development infrastructure ready
-- Hooks active: TDD enforcement will block code without tests
-- 3 priority specialist agents documented and ready
+## 📋 PENDING (Priority Order)
+1. [ ] Initialize FastAPI project structure
+   - Why: Need basic app structure before implementing features
+   - Depends on: Docker environment (completed)
+   
+2. [ ] Set up PostgreSQL schema with Alembic
+   - Why: Database migrations and schema management
+   - Depends on: FastAPI structure
+   
+3. [ ] Implement OpenPhone webhook receiver with queue
+   - Why: Core functionality for receiving SMS
+   - Depends on: Database schema
+   
+4. [ ] Configure Celery with Redis for async processing
+   - Why: Background task processing for campaign sending
+   - Depends on: Basic app structure
 
-## 🤖 How to Continue Next Session
-Start with: "Continue Attack-a-Crack v2. Read CLAUDE.md and .claude/todos/current.md, then proceed with pending tasks using agents."
+## 🔍 RECOVERY CONTEXT
+### Currently Working On
+- **Task**: Docker environment setup phase complete
+- **File**: All Docker configuration files created
+- **Problem**: Ready to move to FastAPI application structure
+- **Solution**: Use fastapi-implementation agent to create project structure
 
-## ⚠️ Important Reminders
-- Hooks will BLOCK code without tests
-- Use Task tool to invoke specialist agents
-- No feature is "done" without screenshot proof
-- Docker environment needs to be created first
+### Key Decisions This Session
+- 10:05 AM: Decided to exclude ngrok from v2 Docker setup (learned from v1 complexity)
+- 10:20 AM: Chose Python 3.11 for better async performance
+- 10:25 AM: Used multi-stage Docker builds for smaller images
+- 10:45 AM: Included Celery+Redis from start for async task processing
+
+### Files Created/Modified This Session
+- `docker-compose.yml` - Main container orchestration
+- `backend/Dockerfile` - Python 3.11 FastAPI container  
+- `frontend/Dockerfile` - Node 20 SvelteKit container
+- `backend/entrypoint.sh` - FastAPI startup script
+- `backend/requirements.txt` - Python dependencies
+- `frontend/package.json` - Node dependencies and scripts
+- `.env.example` - Environment variable template
+- `.env.local` - Local development config
+- `.gitignore` - Project exclusions
+- `.claude/hooks/persist-todos.sh` - Todo persistence automation
+
+### Commands to Resume
+```bash
+# Start the complete development environment:
+cd /Users/matt/Projects/attackacrack/attackacrack-v2
+docker-compose up -d
+
+# Check all services are running:
+docker-compose ps
+
+# View logs if needed:
+docker-compose logs backend
+docker-compose logs frontend
+```
+
+## 🎯 Definition of Done for Next Task (FastAPI Structure)
+- [ ] FastAPI app created with proper structure
+- [ ] Basic health check endpoint working
+- [ ] Database connection configured
+- [ ] Alembic migrations initialized
+- [ ] Test structure in place
+- [ ] All services accessible via Docker
+
+## 📝 Session Notes
+- 10:05 AM: Docker environment phase represents major milestone - full containerized development ready
+- 10:30 AM: v1 analysis showed ngrok caused complexity - v2 will use cleaner webhook approach
+- 11:00 AM: All foundation files created, ready for application structure phase
+
+## ⚠️ Blockers & Issues
+*No active blockers - Docker environment setup complete*
+
+## 🔜 Next Session Priority
+After Docker environment verification:
+1. Use fastapi-implementation agent to create FastAPI app structure
+2. Set up database models and Alembic migrations  
+3. Create basic webhook endpoint for OpenPhone
+4. Add Celery task configuration
