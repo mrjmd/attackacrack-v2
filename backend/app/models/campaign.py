@@ -50,6 +50,18 @@ class Campaign(BaseModel):
         nullable=False
     )
     
+    # A/B testing fields
+    message_template_b = Column(
+        Text,
+        nullable=True  # Optional for A/B testing
+    )
+    
+    ab_test_percentage = Column(
+        Integer,
+        nullable=True,  # Optional percentage for A/B testing (0-100)
+        default=None
+    )
+    
     # Campaign status
     status = Column(
         SQLEnum(CampaignStatus),

@@ -262,7 +262,7 @@ async def webhook_test_setup(client: AsyncClient, webhook_signature):
 
 
 @pytest_asyncio.fixture
-async def test_user(db_session: AsyncSession):
+async def test_user(db_session_commit: AsyncSession):
     """Create a test user for webhook tests."""
     from app.models import User
     
@@ -271,6 +271,7 @@ async def test_user(db_session: AsyncSession):
         name="Test User",
         is_active=True
     )
-    db_session.add(user)
-    await db_session.flush()  # Get the ID
+    db_session_commit.add(user)
+    await db_session_commit.commit()
+    await db_session_commit.refresh(user)  # Get the ID
     return user
