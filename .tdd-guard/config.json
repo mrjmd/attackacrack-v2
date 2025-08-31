@@ -1,0 +1,47 @@
+{
+  "version": "1.0.0",
+  "project": "attackacrack-v2",
+  "languages": {
+    "python": {
+      "testRunner": "pytest",
+      "testPattern": "tests/**/test_*.py",
+      "coverageThreshold": 95,
+      "testCommand": "docker-compose exec -T backend pytest"
+    },
+    "typescript": {
+      "testRunner": "vitest",
+      "testPattern": "**/*.test.ts",
+      "coverageThreshold": 95
+    },
+    "svelte": {
+      "testRunner": "playwright",
+      "testPattern": "tests/**/*.spec.ts",
+      "requireScreenshot": true
+    }
+  },
+  "rules": {
+    "blockWithoutTest": true,
+    "requireFailingTestFirst": true,
+    "preventTestModification": true,
+    "enforceMinimalImplementation": true
+  },
+  "validationMessages": {
+    "noTest": "❌ BLOCKED: Write test first! Use: Task agent=tdd-enforcer",
+    "passingTest": "❌ BLOCKED: Test must fail first (RED phase)",
+    "modifyingTest": "❌ BLOCKED: Fix implementation, not test!",
+    "overImplementation": "⚠️ WARNING: Implementing more than test requires"
+  },
+  "directories": {
+    "backend": "backend/app",
+    "backendTests": "backend/tests",
+    "frontend": "frontend/src",
+    "frontendTests": "frontend/tests"
+  },
+  "excludePatterns": [
+    "**/node_modules/**",
+    "**/.venv/**",
+    "**/migrations/**",
+    "**/__pycache__/**",
+    "**/.pytest_cache/**"
+  ]
+}

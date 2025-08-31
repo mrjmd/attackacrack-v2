@@ -1,5 +1,14 @@
 # CLAUDE.md - Attack-a-Crack v2 Development Rules & Architecture
 
+## 🚀 SESSION START PROTOCOL 🚀
+
+**EVERY new session MUST begin with:**
+1. Read this CLAUDE.md file completely
+2. Read `.claude/todos/current.md` for current state and pending tasks
+3. Continue with pending tasks using appropriate agents
+
+**Single Source of Truth**: `.claude/todos/current.md` contains ALL current context
+
 ## 🚨 MANDATORY AGENT-BASED TDD WORKFLOW 🚨
 
 ### ⚠️ AUTOMATIC WORKFLOW - NO MANUAL INTERVENTION ⚠️
@@ -61,6 +70,20 @@ Claude:
 5. → campaign-specialist (implements logic)
 6. → playwright-test-specialist (validates in browser)
 ```
+
+## 📁 v1 Reference Location
+**Attack-a-Crack v1 location**: `../openphone-sms/`
+
+When implementing v2 features, reference v1 for:
+- What worked well (to keep)
+- What failed (to avoid)
+- Existing patterns (to improve)
+
+Key v1 directories for reference:
+- `../openphone-sms/services/` - 49 service files (too many!)
+- `../openphone-sms/repositories/` - 38 repository files (over-abstracted)
+- `../openphone-sms/models/` - Database models
+- `../openphone-sms/tasks/` - Celery tasks
 
 ## 🔴 INSTANT FAILURE CONDITIONS
 If you do ANY of these, STOP immediately:
@@ -299,19 +322,6 @@ jobs:
       "command": "npx",
       "args": ["playwright-mcp"],
       "description": "Browser testing and automation"
-    },
-    "postgresql": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "crystaldba/postgres-mcp"],
-      "env": {"DATABASE_URI": "${DATABASE_URL}"}
-    },
-    "github": {
-      "command": "github-mcp",
-      "args": ["--repo", "attackacrack/v2"]
-    },
-    "filesystem": {
-      "command": "fs-mcp",
-      "args": ["--root", "."]
     }
   }
 }
