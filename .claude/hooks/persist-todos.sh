@@ -1,6 +1,6 @@
 #!/bin/bash
-# persist-todos.sh - Basic history tracking for todos
-# Note: This cannot capture TodoWrite data - use todo-manager agent instead
+# persist-todos.sh - Smart history tracking for todos
+# Only called manually or by todo-manager agent, NOT by TodoWrite
 
 TODOS_DIR=".claude/todos"
 HISTORY_DIR=".claude/todos/history"
@@ -12,15 +12,32 @@ HISTORY_FILE="$HISTORY_DIR/${DATE_STAMP}.md"
 # Create directories if don't exist
 mkdir -p "$TODOS_DIR" "$HISTORY_DIR"
 
-# If current file exists, append to daily history
+# If current file exists, check if it's actually different before appending
 if [ -f "$CURRENT_FILE" ]; then
-    # Append to daily history file
-    echo "" >> "$HISTORY_FILE"
-    echo "---" >> "$HISTORY_FILE"
-    echo "### Snapshot at $(date +"%H:%M:%S")" >> "$HISTORY_FILE"
-    cat "$CURRENT_FILE" >> "$HISTORY_FILE"
+    # Get the last snapshot from history if it exists
+    if [ -f "$HISTORY_FILE" ]; then
+        # Extract last snapshot (everything after the last "### Snapshot at")
+        LAST_SNAPSHOT=$(tac "$HISTORY_FILE" | sed '/### Snapshot at/q' | tac | tail -n +2)
+        CURRENT_CONTENT=$(tail -n +3 "$CURRENT_FILE")  # Skip header lines
+        
+        # Only append if content has actually changed
+        if [ "$LAST_SNAPSHOT" != "$CURRENT_CONTENT" ]; then
+            echo "" >> "$HISTORY_FILE"
+            echo "---" >> "$HISTORY_FILE"
+            echo "### Snapshot at $(date +"%H:%M:%S")" >> "$HISTORY_FILE"
+            cat "$CURRENT_FILE" >> "$HISTORY_FILE"
+            echo "📚 History snapshot saved (content changed)"
+        else
+            echo "⏭️  Skipping history snapshot (no changes detected)"
+        fi
+    else
+        # First snapshot of the day
+        echo "### Snapshot at $(date +"%H:%M:%S")" >> "$HISTORY_FILE"
+        cat "$CURRENT_FILE" >> "$HISTORY_FILE"
+        echo "📚 First history snapshot of the day saved"
+    fi
     
-    # Just update timestamp in current file
+    # Update timestamp in current file
     sed -i.bak "2s/.*/*Last updated: $(date)*/" "$CURRENT_FILE"
 else
     # Create new template

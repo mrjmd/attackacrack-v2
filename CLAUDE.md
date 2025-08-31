@@ -45,9 +45,11 @@ When user requests ANY feature or fix:
 ### You CANNOT Claim "Done" Without:
 - [ ] todo-manager has tracked the task
 - [ ] Test specialist wrote failing tests (RED)
-- [ ] Implementation agent made tests pass (GREEN)
+- [ ] Implementation agent made tests pass (GREEN) - **100% PASS RATE REQUIRED**
 - [ ] playwright-test-specialist validated with screenshot
 - [ ] Coverage report showing >95% for new code
+
+**CRITICAL**: Tasks with <100% test pass rate are INCOMPLETE. No exceptions.
 
 ## 🤖 AGENT SELECTION MATRIX
 
