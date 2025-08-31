@@ -75,6 +75,7 @@ class TestAlembicConfiguration:
 
 
 # TODO: Add TestAlembicCommands when Alembic is set up
+# See DEFERRED_TESTS.md in this directory for full documentation
 # - test_alembic_current_command: Test `alembic current` shows current revision
 # - test_alembic_history_command: Test `alembic history` shows migration history
 # - test_alembic_check_command: Test `alembic check` detects pending migrations
