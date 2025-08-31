@@ -72,7 +72,37 @@ if [ -d "backend/tests" ] || [ -d "frontend/tests" ] || [ -d "tests" ]; then
             echo "  - CLAUDE.md: Implementation must pass ALL tests (100%)"
             echo "  - No skipped tests - all tests must run and pass"
             echo "  - Definition of Done: 100% pass rate with no skips"
+            echo ""
+            echo "📝 If tests must be deferred/removed:"
+            echo "  1. Remove the test completely (don't skip)"
+            echo "  2. Add TODO comment in test file with:"
+            echo "     - What the test was testing"
+            echo "     - Why it was removed"
+            echo "     - When to add it back"
+            echo "  3. Document in backend/tests/DEFERRED_TESTS.md"
             exit 1
+        fi
+        
+        # Check if DEFERRED_TESTS.md was updated when tests were removed
+        if [ -f "backend/tests/DEFERRED_TESTS.md" ]; then
+            # Check if file was modified recently (within last 10 minutes)
+            DEFERRED_FILE="backend/tests/DEFERRED_TESTS.md"
+            if [ "$(uname)" = "Darwin" ]; then
+                FILE_MOD_TIME=$(stat -f %m "$DEFERRED_FILE")
+            else
+                FILE_MOD_TIME=$(stat -c %Y "$DEFERRED_FILE")
+            fi
+            CURRENT_TIME=$(date +%s)
+            TIME_DIFF=$((CURRENT_TIME - FILE_MOD_TIME))
+            
+            # If tests were removed (check git diff), ensure documentation exists
+            if git diff --cached --name-only | grep -q "test_.*\.py"; then
+                REMOVED_TESTS=$(git diff --cached | grep -E "^-.*def test_" | wc -l)
+                if [ "$REMOVED_TESTS" -gt 0 ] && [ "$TIME_DIFF" -gt 600 ]; then
+                    echo "⚠️  WARNING: Tests appear to be removed but DEFERRED_TESTS.md not updated"
+                    echo "   Ensure all removed tests are documented!"
+                fi
+            fi
         fi
         
         echo "✅ Backend tests passing"

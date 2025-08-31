@@ -1,4 +1,22 @@
-# TODO - Attack-a-Crack v2
+# Deferred Tests Documentation
+
+This file tracks all tests that were removed to achieve 100% pass rate with zero skips.
+Every removed test MUST be documented here with: what, why, when to restore.
+
+## Template for New Entries
+
+```markdown
+### [Test Class/Function Name]
+**Date Removed**: [Date]
+**Removed By**: [Agent name]
+**Location**: `path/to/test_file.py`
+**Reason**: [Why it couldn't pass]
+**What it tested**: [Functionality being tested]
+**When to restore**: [Conditions for re-adding]
+**Impact**: [HIGH/MEDIUM/LOW - effect on coverage]
+```
+
+---
 
 ## Deferred Tests (Removed to achieve 100% pass rate)
 

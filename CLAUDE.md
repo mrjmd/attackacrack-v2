@@ -53,7 +53,10 @@ When user requests ANY feature or fix:
 **CRITICAL REQUIREMENTS**:
 - Tasks with <100% test pass rate are INCOMPLETE. No exceptions.
 - **NO SKIPPED TESTS ALLOWED** - Skipped tests are technical debt and false completion
-- If a test is not needed, remove it and document why in a TODO
+- If a test must be deferred/removed:
+  1. Remove it completely (don't skip)
+  2. Add TODO comment in test file with: what/why/when
+  3. Document in `backend/tests/DEFERRED_TESTS.md` with full details
 - 100% means: ALL tests pass, ZERO failures, ZERO errors, ZERO skipped
 
 ## 🤖 AGENT SELECTION MATRIX
