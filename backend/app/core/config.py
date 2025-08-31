@@ -24,6 +24,18 @@ class Settings(BaseSettings):
     # CORS configuration  
     cors_origins_str: str = Field(default="http://localhost:3000,http://localhost:5173", alias="cors_origins")
     
+    # OpenPhone configuration
+    openphone_api_key: str = Field(default="")
+    openphone_webhook_secret: str = Field(default="test_webhook_secret")
+    
+    # Webhook security configuration
+    webhook_timestamp_tolerance: int = Field(default=300)  # 5 minutes
+    
+    # Celery configuration
+    celery_broker_url: str = Field(default="redis://redis:6379/0")
+    celery_result_backend: str = Field(default="redis://redis:6379/0")
+    celery_task_max_retries: int = Field(default=3)
+    
     @property
     def cors_origins(self) -> List[str]:
         return [origin.strip() for origin in self.cors_origins_str.split(',')]
@@ -61,3 +73,6 @@ class Settings(BaseSettings):
 @lru_cache()
 def get_settings() -> Settings:
     return Settings()
+
+# Global settings instance for import convenience
+settings = get_settings()

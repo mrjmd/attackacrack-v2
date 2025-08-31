@@ -6,7 +6,7 @@ Represents individual SMS messages with delivery tracking and status management.
 
 from datetime import datetime, timezone
 from typing import Optional, TYPE_CHECKING
-from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum as SQLEnum
+from sqlalchemy import Column, String, Text, DateTime, ForeignKey, Enum as SQLEnum, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship, Mapped
 import enum
@@ -25,6 +25,24 @@ class MessageStatus(str, enum.Enum):
     SENT = "sent"             # Message has been sent to carrier
     DELIVERED = "delivered"   # Message was delivered to recipient
     FAILED = "failed"         # Message failed to send or deliver
+    RECEIVED = "received"     # Inbound message received
+    MISSED = "missed"         # Missed call
+    COMPLETED = "completed"   # Call completed
+
+
+class MessageType(str, enum.Enum):
+    """Message type enumeration."""
+    
+    SMS = "sms"               # SMS message
+    CALL = "call"             # Voice call
+    VOICEMAIL = "voicemail"   # Voicemail message
+
+
+class MessageDirection(str, enum.Enum):
+    """Message direction enumeration."""
+    
+    INBOUND = "inbound"       # Incoming message/call
+    OUTBOUND = "outbound"     # Outgoing message/call
 
 
 class Message(BaseModel):
@@ -37,10 +55,66 @@ class Message(BaseModel):
     
     __tablename__ = "messages"
     
-    # Message content
+    # External ID from OpenPhone API
+    external_id = Column(
+        String(100),
+        nullable=True,
+        index=True,
+        unique=True  # Prevent duplicate webhook processing
+    )
+    
+    # Message content (body)
+    body = Column(
+        Text,
+        nullable=True  # Allow null for call records
+    )
+    
+    # Legacy content field for backward compatibility
     content = Column(
         Text,
-        nullable=False
+        nullable=True
+    )
+    
+    # Message direction
+    direction = Column(
+        SQLEnum(MessageDirection),
+        nullable=False,
+        default=MessageDirection.OUTBOUND,
+        index=True
+    )
+    
+    # Message type
+    message_type = Column(
+        SQLEnum(MessageType),
+        nullable=False,
+        default=MessageType.SMS,
+        index=True
+    )
+    
+    # Phone numbers
+    from_phone = Column(
+        String(20),
+        nullable=True,
+        index=True
+    )
+    
+    to_phone = Column(
+        String(20),
+        nullable=True,
+        index=True
+    )
+    
+    # Call duration in seconds
+    duration_seconds = Column(
+        Integer,
+        nullable=True
+    )
+    
+    # Received timestamp for inbound messages
+    received_at = Column(
+        DateTime(timezone=True),
+        nullable=True,
+        index=True
     )
     
     # Message status
@@ -70,7 +144,7 @@ class Message(BaseModel):
         nullable=True
     )
     
-    # OpenPhone integration
+    # Legacy OpenPhone integration field
     openphone_message_id = Column(
         String(100),
         nullable=True,
@@ -81,7 +155,7 @@ class Message(BaseModel):
     campaign_id = Column(
         UUID(as_uuid=True),
         ForeignKey("campaigns.id", ondelete="CASCADE"),
-        nullable=False,
+        nullable=True,  # Allow null for webhook-originated messages
         index=True  # Index for campaign message queries
     )
     
@@ -93,7 +167,7 @@ class Message(BaseModel):
     )
     
     # Relationships
-    campaign: Mapped["Campaign"] = relationship(
+    campaign: Mapped[Optional["Campaign"]] = relationship(
         "Campaign",
         back_populates="messages"
     )
@@ -113,7 +187,8 @@ class Message(BaseModel):
         self.status = MessageStatus.SENT
         self.sent_at = datetime.now(timezone.utc)
         if openphone_id:
-            self.openphone_message_id = openphone_id
+            self.external_id = openphone_id
+            self.openphone_message_id = openphone_id  # Backward compatibility
     
     def mark_delivered(self) -> None:
         """Mark message as delivered."""
@@ -149,4 +224,4 @@ class Message(BaseModel):
     
     def __repr__(self) -> str:
         """String representation showing status and timestamps."""
-        return f"<Message(status='{self.status.value}', sent_at={self.sent_at})>"
+        return f"<Message(id={self.id}, type='{self.message_type.value}', direction='{self.direction.value}', status='{self.status.value}')>"

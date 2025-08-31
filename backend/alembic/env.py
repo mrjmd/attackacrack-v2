@@ -15,10 +15,11 @@ sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 config = context.config
 
 # Set sqlalchemy.url from environment variable
-config.set_main_option(
-    "sqlalchemy.url", 
-    os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/attackacrack_v2")
-)
+# Use psycopg for synchronous migrations
+db_url = os.getenv("DATABASE_URL", "postgresql+asyncpg://postgres:password@localhost:5432/attackacrack_v2")
+# Replace asyncpg with psycopg for migrations
+db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
+config.set_main_option("sqlalchemy.url", db_url)
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
