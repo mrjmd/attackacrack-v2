@@ -8,18 +8,28 @@ Focus on the core workflow: **Lead → Quote → Schedule → Complete → Get P
 
 ## 🎯 MVP Core Features (MUST HAVE)
 
-### 1. OpenPhone Integration (Basic)
+### 1. OpenPhone Integration (CRITICAL FOR MVP)
 **What's IN:**
+- ✅ **Webhook receiver (MUST WORK 24/7)** - Required for smoke tests
 - ✅ Send/receive SMS via API
+- ✅ Webhook processing with deduplication
+- ✅ Message queue for reliable processing
 - ✅ Contact sync (one-way from OpenPhone)
 - ✅ Basic conversation view
 - ✅ Click-to-text from contacts
+- ✅ **Test webhook endpoint** (for operational health checks)
 
 **What's OUT:**
 - ❌ Historical import (Phase 2)
 - ❌ Call handling
 - ❌ Voicemail transcription
 - ❌ Media attachments (Phase 2)
+
+**Why Webhooks are Critical:**
+- Smoke tests depend on webhook validation
+- Operational health checks require webhook monitoring
+- Campaign responses come through webhooks
+- Without webhooks, the system is blind to incoming messages
 
 ### 2. Contact Management
 **What's IN:**
@@ -248,6 +258,10 @@ todos (id, description, completed, due_date)
   
 - **Risk**: CSV import failures
   - **Mitigation**: Extensive testing, validation
+
+- **Risk**: Webhook failures go unnoticed
+  - **Mitigation**: Second OpenPhone number (~$15/month) for automated testing
+  - **Implementation**: Send test SMS every hour, verify webhook received
 
 ### Business Risks:
 - **Risk**: Missing quote approvals

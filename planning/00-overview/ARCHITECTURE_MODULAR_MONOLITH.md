@@ -97,6 +97,83 @@ The backend exposes a RESTful API that:
 - Authentication via JWT tokens
 - Real-time updates via WebSockets
 
+### 4. Storage Abstraction (Future-Proofing)
+To enable smooth transition from single-server to multi-server deployment:
+
+```python
+# backend/app/core/storage.py
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import BinaryIO
+
+class StorageService(ABC):
+    """Abstract storage interface for media/files"""
+    
+    @abstractmethod
+    async def store(self, key: str, data: bytes) -> str:
+        """Store data and return URL/path"""
+        pass
+    
+    @abstractmethod
+    async def retrieve(self, key: str) -> bytes:
+        """Retrieve data by key"""
+        pass
+    
+    @abstractmethod
+    async def delete(self, key: str) -> bool:
+        """Delete data by key"""
+        pass
+    
+    @abstractmethod
+    async def exists(self, key: str) -> bool:
+        """Check if key exists"""
+        pass
+
+# MVP Implementation - Local filesystem
+class LocalFileStorage(StorageService):
+    """Local filesystem storage for MVP"""
+    
+    def __init__(self, base_path: Path):
+        self.base_path = base_path
+        self.base_path.mkdir(parents=True, exist_ok=True)
+    
+    async def store(self, key: str, data: bytes) -> str:
+        file_path = self.base_path / key
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_bytes(data)
+        return f"/media/{key}"  # URL path for retrieval
+    
+    async def retrieve(self, key: str) -> bytes:
+        file_path = self.base_path / key
+        return file_path.read_bytes()
+    
+    async def delete(self, key: str) -> bool:
+        file_path = self.base_path / key
+        if file_path.exists():
+            file_path.unlink()
+            return True
+        return False
+    
+    async def exists(self, key: str) -> bool:
+        return (self.base_path / key).exists()
+
+# Future Implementation - DigitalOcean Spaces
+class SpacesStorage(StorageService):
+    """DigitalOcean Spaces storage for production"""
+    
+    def __init__(self, bucket_name: str, region: str):
+        # Implementation for S3-compatible storage
+        pass
+    
+    # ... implement abstract methods
+```
+
+**Why This Matters:**
+- MVP uses local storage (simple, fast)
+- Production can switch to Spaces/S3 with one-line change
+- No code changes needed in services using storage
+- Enables horizontal scaling later
+
 ## Project Structure
 
 ### Complete Application Structure

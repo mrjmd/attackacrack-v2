@@ -15,24 +15,36 @@ Attack-a-Crack deals with complex relationships between people and properties in
 
 ## Data Model
 
+### Multi-Location Readiness [IMPORTANT]
+**Future Expansion**: Connecticut branch planned for 2025. All models include `location_id` from Day 1 to avoid painful migrations later.
+
+```python
+# Default location for MVP (single location)
+DEFAULT_LOCATION_ID = "11111111-1111-1111-1111-111111111111"  # New Jersey
+```
+
 ### Contacts (People)
 ```python
 class Contact:
     id: UUID
+    location_id: UUID = DEFAULT_LOCATION_ID  # Branch/location ownership
     first_name: str
     last_name: str
-    phone: str  # Primary, unique
+    phone: str  # Primary, unique per location
     email: str
     contact_type: str  # "homeowner", "realtor", "builder", "property_manager", "HOA"
     source: str  # "propertyradar", "referral", "quickbooks"
     created_at: datetime
+    
+    # Unique constraint: (phone, location_id)
 ```
 
 ### Properties (Locations)
 ```python
 class Property:
     id: UUID
-    address: str  # Full address, unique
+    location_id: UUID = DEFAULT_LOCATION_ID  # Which branch manages this
+    address: str  # Full address
     city: str
     state: str
     zip: str
@@ -45,6 +57,8 @@ class Property:
     
     # Business data
     notes: Text
+    
+    # Unique constraint: (address, location_id)
 ```
 
 ### Contact-Property Relationships (Many-to-Many)
@@ -64,6 +78,7 @@ class ContactPropertyRelationship:
 ```python
 class Job:
     id: UUID
+    location_id: UUID = DEFAULT_LOCATION_ID  # Branch handling the job
     property_id: UUID
     primary_contact_id: UUID
     status: str  # "Quoted", "Assessment Scheduled", "Active", "Complete"
@@ -76,6 +91,11 @@ class Job:
     # NOT created for:
     # - Initial inquiries
     # - Tire kickers
+    
+    # Job completion triggers (for automated follow-ups)
+    calendar_event_id: UUID  # Links to Google Calendar
+    invoice_id: UUID  # Links to QuickBooks
+    completed_at: datetime  # Set when BOTH calendar passed AND invoice paid
 ```
 
 ### Job Participants (Multiple people per job)
@@ -90,6 +110,7 @@ class JobParticipant:
 ```python
 class List:
     id: UUID
+    location_id: UUID = DEFAULT_LOCATION_ID  # Branch that owns this list
     name: str  # "Salem October 2024 Import"
     source: str  # "propertyradar_import", "manual_search"
     created_at: datetime

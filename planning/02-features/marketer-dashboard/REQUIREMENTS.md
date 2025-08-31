@@ -119,22 +119,60 @@ Reviews:
 - Seasonal promotions
 - Blog post schedule
 
-## Access Controls
+## Access Controls [FINALIZED]
 
 ### What Marketer CAN Access:
-✅ All job photos
-✅ Customer names and locations (for posts)
-✅ Review content
-✅ Campaign tools
-✅ Social media accounts
-✅ Marketing analytics
+✅ View and edit EXISTING campaigns (not create new)
+✅ All job photos from completed work
+✅ Customer first names and cities only (for posts)
+✅ Review content for social sharing
+✅ Social media publishing tools
+✅ Marketing analytics (response rates, engagement)
+✅ Content calendar for social posts
 
 ### What Marketer CANNOT Access:
-❌ Financial data (quotes, invoices)
-❌ Full customer contact info
-❌ Operational scheduling
+❌ Create NEW campaigns (owner only)
+❌ Create NEW contact lists
+❌ Financial data (quotes, invoices, revenue)
+❌ Full customer contact info (phone, email, address)
+❌ Operational scheduling/calendar
+❌ Direct messaging with customers
 ❌ Employee conversations
-❌ Sensitive business metrics
+❌ Import CSV files
+❌ Delete campaigns or contacts
+
+### Specific Permissions:
+```python
+class MarketerPermissions:
+    # Campaign Management
+    can_view_campaigns = True
+    can_edit_campaign_content = True  # Messages, templates
+    can_create_campaigns = False  # Owner only
+    can_delete_campaigns = False
+    can_import_contacts = False
+    
+    # Content Management  
+    can_view_job_photos = True
+    can_create_social_posts = True
+    can_publish_social = True
+    
+    # Data Access
+    can_see_customer_full_name = False  # First name only
+    can_see_customer_phone = False
+    can_see_customer_address = False  # City only
+    can_see_financial_data = False
+    
+    # Analytics
+    can_view_marketing_metrics = True
+    can_view_business_metrics = False
+```
+
+### Why These Restrictions?
+- **Privacy Protection**: Customer data stays confidential
+- **Business Security**: Financial info protected
+- **Clear Boundaries**: Marketing focus without operational access
+- **Mistake Prevention**: Can't accidentally delete/corrupt data
+- **Trust Building**: Owner maintains control of customer relationships
 
 ## Automation Features
 

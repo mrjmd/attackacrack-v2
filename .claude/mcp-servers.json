@@ -1,0 +1,36 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": ["-y", "@playwright/test"],
+      "description": "Browser automation and testing - CRITICAL for TDD validation",
+      "env": {
+        "NODE_ENV": "test"
+      }
+    },
+    "ref": {
+      "command": "ref-mcp",
+      "args": ["--docs", "./docs", "--max-tokens", "5000"],
+      "description": "Documentation access with token optimization - reduces usage by 85%"
+    }
+  },
+  "settings": {
+    "MAX_MCP_OUTPUT_TOKENS": 50000,
+    "MCP_DEBUG": false
+  },
+  "notes": {
+    "minimal_setup": "Only 2 MCP servers for optimal performance",
+    "playwright": "Essential for browser testing without screenshots",
+    "ref": "Reduces token usage by 85% when accessing documentation",
+    "why_not_others": {
+      "github": "Using CLI directly (gh command)",
+      "postgresql": "Docker exec commands work fine",
+      "docker": "Docker CLI is sufficient",
+      "filesystem": "Native file operations work"
+    },
+    "future_consideration": [
+      "openphone-mcp (if/when available for webhook testing)",
+      "k6-mcp (if performance testing becomes complex)"
+    ]
+  }
+}

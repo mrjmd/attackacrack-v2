@@ -169,19 +169,67 @@ class AutomatedMessageService:
 - Configuration requires documentation
 - Bugs in one area affect others
 
-## Decision Point
-Before implementing, we need to decide:
-1. Unified system or separate systems?
-2. If unified, how to prevent complexity explosion?
-3. If separate, what components to share?
-4. How to maintain consistency across systems?
+## Decision Point [RESOLVED]
 
-## Recommendation
-Start with **separate systems sharing core services**. This allows us to:
-- Build faster
-- Learn what's really needed
-- Refactor with real-world knowledge
-- Avoid premature abstraction
+### Final Architecture Decision: Separate Services with Shared Components
+
+Based on team review and v1 lessons learned, we will implement **two distinct services**:
+
+1. **MarketingCampaignService** - For bulk marketing messages
+   - A/B testing for templates
+   - Daily limits (125 messages)
+   - Business hours enforcement (9am-6pm ET)
+   - Opt-out handling
+   - List-based sending
+   - Response tracking and analytics
+
+2. **TransactionalNotificationService** - For automated business messages
+   - Appointment reminders (1 day before)
+   - Job completion follow-ups
+   - Review requests
+   - Payment reminders
+   - MUST always deliver (no daily limits)
+   - Immediate sending (no business hours restriction)
+   - Higher priority in queue
+
+### Shared Components
+Both services will share these underlying components:
+```python
+class OpenPhoneDeliveryClient:
+    """Handles actual SMS sending via OpenPhone API"""
+    
+class ABTestingEngine:
+    """A/B testing logic for both marketing and transactional"""
+    
+class MessageAnalytics:
+    """Unified analytics for all message types"""
+    
+class OptOutManager:
+    """Central opt-out list management"""
+```
+
+### Job Completion Triggers (Critical Business Logic)
+A job is marked complete when BOTH conditions are met:
+1. The job's Google Calendar event has passed (end_time < now)
+2. The job's QuickBooks invoice is marked as paid
+
+```python
+def is_job_complete(job) -> bool:
+    """
+    Job completion requires both calendar event completion 
+    AND invoice payment. This triggers follow-up sequences.
+    """
+    calendar_complete = job.calendar_event.end_time < datetime.now()
+    invoice_paid = job.invoice.status == 'paid'
+    return calendar_complete and invoice_paid
+```
+
+### Why This Architecture?
+- **Avoids "God System"**: Each service has clear, focused responsibility
+- **Different Requirements**: Marketing has limits, transactional must always send
+- **Easier Testing**: Each service can be tested independently
+- **Clear Mental Model**: Developers know exactly where code belongs
+- **Proven Pattern**: This separation is industry standard (SendGrid, Twilio, etc.)
 
 ---
 

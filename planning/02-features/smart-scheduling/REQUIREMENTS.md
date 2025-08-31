@@ -221,25 +221,51 @@ RECOMMENDED SLOTS:
 - Technician satisfaction: Reduced stress
 - Callback rate: <5%
 
-## Implementation Phases
+## Implementation Phases [REVISED]
 
-### MVP (Basic Smart Suggestions)
-- Manual duration estimates
-- Simple distance calculation
-- Basic weather checking
-- Show 3 best slots
+### Phase 1 - MVP (Weeks 1-6)
+**NOT IN MVP** - Smart Scheduling is completely deferred from initial launch
 
-### Phase 2 (Route Optimization)
-- Multi-stop optimization
-- Real-time traffic
-- Visual route mapping
-- Capacity warnings
+### Phase 2 - Basic Visibility (Weeks 7-10)
+**Simple Context in Conversation View:**
+- Show distance to property (straight line)
+- Show current weather for area
+- Display "Last job at this property" date
+- Manual scheduling remains in Google Calendar
 
-### Phase 3 (ML-Powered)
-- Learning from historicals
-- Predictive scheduling
-- Auto-optimization
+### Phase 3 - Distance & Weather (Weeks 11-14)
+**Basic Intelligence:**
+- Calculate actual drive time (Google Maps API)
+- Show drive time in conversation sidebar
+- Weather alerts for scheduled jobs (rain warning)
+- Still manual scheduling, but better informed
+
+### Phase 4 - Route Optimization (Weeks 15-18)
+**First Real "Smart" Features:**
+- Suggest "jobs nearby" when scheduling
+- Daily route map view (visual only)
+- "This job is 45 min from others" warnings
+- Manual optimization based on suggestions
+
+### Phase 5 - Slot Suggestions (Months 6-9)
+**Semi-Automated Scheduling:**
+- Suggest 3 best time slots
+- Consider distance to other jobs
+- Factor in weather forecast
+- Basic capacity warnings (>3 jobs/day)
+
+### Phase 6 - ML-Powered (Year 2)
+**True Intelligence:**
+- Learning from historical patterns
+- Auto-optimization proposals
 - Customer preference learning
+- Predictive busy period planning
+
+### Why This Phasing?
+- **Avoids Complexity Trap**: v1 failed from over-engineering
+- **Delivers Value Incrementally**: Each phase useful alone
+- **Learns Real Needs**: Build based on actual usage
+- **Manages Risk**: Complex ML features only after core proven
 
 ## Questions for Next Session
 
