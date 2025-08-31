@@ -22,38 +22,56 @@ if [ -d "backend/tests" ] || [ -d "frontend/tests" ] || [ -d "tests" ]; then
             TEST_EXIT_CODE=$?
         fi
         
-        # Check for any test failures (must be 100% pass rate)
-        if [ $TEST_EXIT_CODE -ne 0 ] || echo "$TEST_OUTPUT" | grep -q "FAILED"; then
-            echo "❌ BLOCKED: Backend tests are failing!"
+        # Extract test counts
+        FAILED_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" | head -1 || echo "0")
+        PASSED_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" | head -1 || echo "0")
+        ERROR_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ error" | grep -oE "[0-9]+" | head -1 || echo "0")
+        SKIPPED_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1 || echo "0")
+        
+        # Check for ANY issues: failures, errors, or skipped tests
+        if [ $TEST_EXIT_CODE -ne 0 ] || [ "$FAILED_COUNT" -gt 0 ] || [ "$ERROR_COUNT" -gt 0 ] || [ "$SKIPPED_COUNT" -gt 0 ]; then
+            echo "❌ BLOCKED: Tests are NOT acceptable!"
             echo ""
-            echo "$TEST_OUTPUT" | grep -E "(FAILED|ERROR|passed|failed)" | tail -20
-            echo ""
-            echo "📋 Test Summary:"
-            echo "$TEST_OUTPUT" | grep -E "=.*passed.*failed.*="
+            echo "📊 Test Results:"
+            echo "  ✅ Passed: $PASSED_COUNT"
+            echo "  ❌ Failed: $FAILED_COUNT"
+            echo "  ❌ Errors: $ERROR_COUNT"
+            echo "  ⏭️  Skipped: $SKIPPED_COUNT"
             echo ""
             
-            # Extract pass/fail counts
-            FAILED_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ failed" | grep -oE "[0-9]+" || echo "0")
-            PASSED_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ passed" | grep -oE "[0-9]+" || echo "0")
-            TOTAL_COUNT=$((FAILED_COUNT + PASSED_COUNT))
+            if [ "$SKIPPED_COUNT" -gt 0 ]; then
+                echo "🚫 SKIPPED TESTS ARE NOT ACCEPTABLE!"
+                echo "   Skipped tests are a form of technical debt and false completion."
+                echo "   Either:"
+                echo "   1. Fix the test to pass"
+                echo "   2. Remove it and document why in a TODO"
+                echo ""
+            fi
             
-            if [ "$FAILED_COUNT" -gt 0 ]; then
-                PASS_RATE=$((PASSED_COUNT * 100 / TOTAL_COUNT))
-                echo "🚫 VIOLATION: Only $PASS_RATE% pass rate ($PASSED_COUNT/$TOTAL_COUNT tests passing)"
-                echo "📏 REQUIRED: 100% pass rate (all tests must pass)"
-            else
-                echo "🚫 Tests failed to run or produced errors"
+            if [ "$FAILED_COUNT" -gt 0 ] || [ "$ERROR_COUNT" -gt 0 ]; then
+                TOTAL_COUNT=$((PASSED_COUNT + FAILED_COUNT + ERROR_COUNT))
+                if [ "$TOTAL_COUNT" -gt 0 ]; then
+                    PASS_RATE=$((PASSED_COUNT * 100 / TOTAL_COUNT))
+                    echo "🚫 VIOLATION: Only $PASS_RATE% pass rate"
+                else
+                    echo "🚫 Tests failed to run properly"
+                fi
             fi
             
             echo ""
-            echo "🚫 You CANNOT mark this task complete with failing tests!"
-            echo "🔧 Fix ALL failing tests before proceeding"
+            echo "$TEST_OUTPUT" | grep -E "(FAILED|ERROR|SKIPPED|passed|failed|skipped)" | tail -20
+            echo ""
+            echo "📏 REQUIREMENTS:"
+            echo "  ✅ 100% pass rate (NO failures)"
+            echo "  ✅ 0 errors"
+            echo "  ✅ 0 skipped tests"
+            echo ""
+            echo "🚫 You CANNOT mark this task complete!"
             echo ""
             echo "Rules violated:"
-            echo "  - CLAUDE.md: 'Tests written first and shown failing'"
-            echo "  - CLAUDE.md: 'Implementation passes all tests'"
-            echo "  - Definition of Done: Tests must be 100% passing"
-            echo "  - TDD: No task completion without GREEN phase"
+            echo "  - CLAUDE.md: Implementation must pass ALL tests (100%)"
+            echo "  - No skipped tests - all tests must run and pass"
+            echo "  - Definition of Done: 100% pass rate with no skips"
             exit 1
         fi
         

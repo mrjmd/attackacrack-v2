@@ -46,10 +46,15 @@ When user requests ANY feature or fix:
 - [ ] todo-manager has tracked the task
 - [ ] Test specialist wrote failing tests (RED)
 - [ ] Implementation agent made tests pass (GREEN) - **100% PASS RATE REQUIRED**
+- [ ] **ZERO skipped tests** - All tests must run and pass
 - [ ] playwright-test-specialist validated with screenshot
 - [ ] Coverage report showing >95% for new code
 
-**CRITICAL**: Tasks with <100% test pass rate are INCOMPLETE. No exceptions.
+**CRITICAL REQUIREMENTS**:
+- Tasks with <100% test pass rate are INCOMPLETE. No exceptions.
+- **NO SKIPPED TESTS ALLOWED** - Skipped tests are technical debt and false completion
+- If a test is not needed, remove it and document why in a TODO
+- 100% means: ALL tests pass, ZERO failures, ZERO errors, ZERO skipped
 
 ## 🤖 AGENT SELECTION MATRIX
 

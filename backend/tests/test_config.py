@@ -6,8 +6,13 @@ configuration from environment variables and provides correct defaults.
 """
 
 import os
+import sys
 import pytest
 from unittest.mock import patch
+
+# Fix import path for tests
+sys.path.insert(0, '/app')
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 
 class TestConfigurationSettings:
@@ -15,8 +20,12 @@ class TestConfigurationSettings:
 
     def test_settings_class_exists(self):
         """Test that Settings class can be imported and instantiated."""
-        # Will fail initially - no config.py exists
-        from app.core.config import Settings
+        # Import using absolute file path approach
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("config", "/app/app/core/config.py")
+        config_module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(config_module)
+        Settings = config_module.Settings
         
         settings = Settings()
         assert settings is not None
