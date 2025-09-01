@@ -74,35 +74,102 @@ async def app():
 @pytest_asyncio.fixture
 async def client(app, db_engine) -> AsyncGenerator[AsyncClient, None]:
     """Create async HTTP client for API testing."""
-    from app.core.database import get_db
+    from app.core.deps import get_db, get_current_user
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.asyncio import AsyncSession
     
-    # Always clear any existing overrides first
-    app.dependency_overrides.clear()
-    
-    # Create session factory for API calls
-    TestSessionLocal = sessionmaker(
-        db_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+    # Create a shared session factory for consistent database access
+    TestSession = sessionmaker(
+        db_engine, class_=AsyncSession, expire_on_commit=False
     )
     
-    # Override the get_db dependency
+    # Override the database dependency to use our test database
     async def override_get_db():
-        """Provide database session for API calls."""
-        async with TestSessionLocal() as session:
-            yield session
+        async with TestSession() as session:
+            try:
+                yield session
+            except Exception:
+                await session.rollback()
+                raise
     
-    # Apply the override
+    # Create separate auth function for dependency override
+    from app.models.user import User
+    from sqlalchemy import select
+    from uuid import UUID
+    from fastapi import HTTPException, status, Request
+    
+    async def override_get_current_user(request: Request):
+        """Override get_current_user to use test database session."""
+        async with TestSession() as session:
+            # Extract token from request
+            authorization = request.headers.get('authorization')
+            if not authorization or not authorization.startswith('Bearer '):
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Invalid authentication credentials",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
+            
+            token = authorization.split(' ')[1] if len(authorization.split(' ')) > 1 else ''
+            
+            # Mock token validation
+            if token and token.startswith("test_token_for_"):
+                try:
+                    user_id_str = token.replace("test_token_for_", "")
+                    user_id = UUID(user_id_str)
+                    
+                    query = select(User).where(User.id == user_id)
+                    result = await session.execute(query)
+                    user = result.scalar_one_or_none()
+                    
+                    if not user or not user.is_active:
+                        # For test environment, create user if not found
+                        import os
+                        if os.getenv('ENVIRONMENT') == 'test':
+                            try:
+                                mock_user = User(
+                                    id=user_id,
+                                    email=f"test_{user_id_str[:8]}@example.com",
+                                    name="Test User",
+                                    is_active=True
+                                )
+                                session.add(mock_user)
+                                await session.commit()
+                                await session.refresh(mock_user)
+                                return mock_user
+                            except Exception:
+                                await session.rollback()
+                        
+                        raise HTTPException(
+                            status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail="Invalid authentication credentials",
+                            headers={"WWW-Authenticate": "Bearer"}
+                        )
+                    
+                    # User authenticated successfully
+                    return user
+                except ValueError:
+                    # Invalid UUID format
+                    pass
+            
+            # Invalid or missing token
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid authentication credentials",
+                headers={"WWW-Authenticate": "Bearer"}
+            )
+    
+    # Apply the overrides
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_current_user] = override_get_current_user
     
     try:
         async with AsyncClient(app=app, base_url="http://test") as ac:
             yield ac
     finally:
-        # Clean up the override
-        app.dependency_overrides.clear()
+        # Clean up the overrides
+        app.dependency_overrides.pop(get_db, None)
+        app.dependency_overrides.pop(get_current_user, None)
 
 
 @pytest.fixture
@@ -188,32 +255,74 @@ async def db_engine():
 
 @pytest_asyncio.fixture
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create database session for testing."""
+    """Create database session for testing with proper isolation."""
     async_session = sessionmaker(
         db_engine, class_=AsyncSession, expire_on_commit=False
     )
+    
+    # Clean up BEFORE the test to ensure clean state
+    async with async_session() as cleanup_session:
+        print("[DEBUG] PRE-TEST cleanup starting...")
+        await _cleanup_database(cleanup_session)
     
     async with async_session() as session:
         try:
             yield session
         finally:
-            # Clean up after each test by deleting all data
-            try:
-                from app.models import User, Contact, Campaign, Message, WebhookEvent, Property, PropertyList
-                from app.models.property import contact_property_association
-                
-                # Delete in correct order due to foreign key constraints
-                await session.execute(contact_property_association.delete())
-                await session.execute(Message.__table__.delete())
-                await session.execute(WebhookEvent.__table__.delete())
-                await session.execute(Campaign.__table__.delete())
-                await session.execute(Property.__table__.delete())
-                await session.execute(PropertyList.__table__.delete())
-                await session.execute(Contact.__table__.delete())
-                await session.execute(User.__table__.delete())
-                await session.commit()
-            except Exception:
-                await session.rollback()
+            # Clean up AFTER the test
+            print("[DEBUG] POST-TEST cleanup starting...")
+            await _cleanup_database(session)
+
+
+async def _cleanup_database(session: AsyncSession):
+    """Clean up all test data from database."""
+    try:
+        from app.models import User, Contact, Campaign, Message, WebhookEvent, Property, PropertyList
+        from app.models.property import contact_property_association
+        from sqlalchemy import text
+        
+        # Clean up all test data
+        
+        # Use TRUNCATE for faster cleanup (PostgreSQL specific)
+        # TRUNCATE CASCADE will handle foreign key constraints automatically
+        table_names = [
+            'contact_property_relationships',
+            'messages',
+            'webhook_events', 
+            'campaigns',
+            'properties',
+            'lists',
+            'contacts',
+            'users'
+        ]
+        
+        for table_name in table_names:
+            # Truncate table
+            await session.execute(text(f"TRUNCATE TABLE {table_name} CASCADE"))
+        
+        await session.commit()
+        # Cleanup completed
+        
+    except Exception as e:
+        await session.rollback()
+        # TRUNCATE failed, falling back to DELETE
+        # If TRUNCATE fails, fall back to DELETE
+        try:
+            await session.execute(contact_property_association.delete())
+            await session.execute(Message.__table__.delete())
+            await session.execute(WebhookEvent.__table__.delete())
+            await session.execute(Campaign.__table__.delete())
+            await session.execute(Property.__table__.delete())
+            await session.execute(PropertyList.__table__.delete())
+            await session.execute(Contact.__table__.delete())
+            await session.execute(User.__table__.delete())
+            await session.commit()
+            # DELETE fallback completed
+        except Exception as e2:
+            await session.rollback()
+            # Database cleanup failed completely
+            import logging
+            logging.warning(f"Database cleanup failed: {e}")
 
 
 @pytest_asyncio.fixture
@@ -223,27 +332,16 @@ async def db_session_commit(db_engine) -> AsyncGenerator[AsyncSession, None]:
         db_engine, class_=AsyncSession, expire_on_commit=False
     )
     
+    # Clean up BEFORE the test
+    async with async_session() as cleanup_session:
+        await _cleanup_database(cleanup_session)
+    
     async with async_session() as session:
         try:
             yield session
         finally:
-            # Clean up after transaction tests
-            try:
-                from app.models import User, Contact, Campaign, Message, WebhookEvent, Property, PropertyList
-                from app.models.property import contact_property_association
-                
-                # Delete all data created during the test
-                await session.execute(contact_property_association.delete())
-                await session.execute(Message.__table__.delete())
-                await session.execute(WebhookEvent.__table__.delete())
-                await session.execute(Campaign.__table__.delete())
-                await session.execute(Property.__table__.delete())
-                await session.execute(PropertyList.__table__.delete())
-                await session.execute(Contact.__table__.delete())
-                await session.execute(User.__table__.delete())
-                await session.commit()
-            except Exception:
-                await session.rollback()
+            # Clean up AFTER the test
+            await _cleanup_database(session)
 
 
 @pytest.fixture
@@ -321,20 +419,35 @@ async def webhook_test_setup(client: AsyncClient, webhook_signature):
 
 
 @pytest_asyncio.fixture
-async def test_user(db_session):
-    """Create a test user within the test transaction."""
+async def test_user(db_engine):
+    """Create a test user that persists across sessions."""
     from app.models import User
+    from sqlalchemy.orm import sessionmaker
+    from sqlalchemy.ext.asyncio import AsyncSession
     import uuid
     
-    # Create user within the test transaction so it gets cleaned up automatically
-    unique_id = str(uuid.uuid4())[:8]
-    user = User(
-        email=f"test_{unique_id}@example.com",
-        name="Test User",
-        is_active=True
-    )
-    db_session.add(user)
-    await db_session.commit()  # Commit within test transaction
-    await db_session.refresh(user)  # Refresh to get the ID
+    # Clean database before creating user
+    async with sessionmaker(db_engine, class_=AsyncSession)() as cleanup_session:
+        # Clean database before creating user
+        await _cleanup_database(cleanup_session)
     
-    return user
+    # Create session factory for user creation
+    TestSessionLocal = sessionmaker(
+        db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
+    
+    # Create user in its own session so it can be seen by other sessions
+    unique_id = str(uuid.uuid4())[:8]
+    async with TestSessionLocal() as session:
+        user = User(
+            email=f"test_{unique_id}@example.com",
+            name="Test User",
+            is_active=True
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)
+        # User created successfully
+        return user

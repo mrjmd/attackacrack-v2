@@ -60,17 +60,21 @@ async def get_current_user(
                 # This handles test isolation issues
                 import os
                 if os.getenv('ENVIRONMENT') == 'test':
-                    # Create and save a test user to the database
-                    mock_user = User(
-                        id=user_id,
-                        email=f"test_{user_id_str[:8]}@example.com",
-                        name="Test User",
-                        is_active=True
-                    )
-                    db.add(mock_user)
-                    await db.commit()
-                    await db.refresh(mock_user)
-                    return mock_user
+                    try:
+                        # Create and save a test user to the database
+                        mock_user = User(
+                            id=user_id,
+                            email=f"test_{user_id_str[:8]}@example.com",
+                            name="Test User",
+                            is_active=True
+                        )
+                        db.add(mock_user)
+                        await db.commit()
+                        await db.refresh(mock_user)
+                        return mock_user
+                    except Exception:
+                        # If creation fails, rollback and continue with normal error
+                        await db.rollback()
                 
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,

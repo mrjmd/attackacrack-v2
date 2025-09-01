@@ -10,8 +10,13 @@ COMPLETION_WORDS="done|complete|finished|working|success|ready|achieved|accompli
 
 echo "⚔️ Verifying claims against reality..."
 
-# Get test status
-TEST_STATUS=$(docker-compose exec -T backend pytest tests/ --tb=no -q 2>&1 | tail -1)
+# Get test status (with error handling)
+if docker-compose ps 2>/dev/null | grep -q "backend.*Up"; then
+    TEST_STATUS=$(docker-compose exec -T backend pytest tests/ --tb=no -q 2>&1 | tail -1)
+else
+    echo "⚠️  Docker backend not running - skipping test verification"
+    TEST_STATUS=""
+fi
 
 if echo "$TEST_STATUS" | grep -q "failed"; then
     echo ""

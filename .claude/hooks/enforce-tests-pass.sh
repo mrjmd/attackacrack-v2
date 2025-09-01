@@ -28,6 +28,12 @@ if [ -d "backend/tests" ] || [ -d "frontend/tests" ] || [ -d "tests" ]; then
         ERROR_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ error" | grep -oE "[0-9]+" | head -1 || echo "0")
         SKIPPED_COUNT=$(echo "$TEST_OUTPUT" | grep -oE "[0-9]+ skipped" | grep -oE "[0-9]+" | head -1 || echo "0")
         
+        # Set defaults if empty
+        FAILED_COUNT=${FAILED_COUNT:-0}
+        PASSED_COUNT=${PASSED_COUNT:-0}
+        ERROR_COUNT=${ERROR_COUNT:-0}
+        SKIPPED_COUNT=${SKIPPED_COUNT:-0}
+        
         # Check for ANY issues: failures, errors, or skipped tests
         if [ $TEST_EXIT_CODE -ne 0 ] || [ "$FAILED_COUNT" -gt 0 ] || [ "$ERROR_COUNT" -gt 0 ] || [ "$SKIPPED_COUNT" -gt 0 ]; then
             echo "❌ BLOCKED: Tests are NOT acceptable!"

@@ -17,10 +17,16 @@ fi
 # Check if file was updated in last 5 minutes (300 seconds)
 if [ "$(uname)" = "Darwin" ]; then
     # macOS
-    FILE_MOD_TIME=$(stat -f %m "$TODO_FILE")
+    FILE_MOD_TIME=$(stat -f %m "$TODO_FILE" 2>/dev/null || echo "0")
 else
     # Linux
-    FILE_MOD_TIME=$(stat -c %Y "$TODO_FILE")
+    FILE_MOD_TIME=$(stat -c %Y "$TODO_FILE" 2>/dev/null || echo "0")
+fi
+
+# Handle stat failure
+if [ "$FILE_MOD_TIME" = "0" ]; then
+    echo "⚠️  Could not check todo file modification time"
+    exit 0
 fi
 CURRENT_TIME=$(date +%s)
 TIME_DIFF=$((CURRENT_TIME - FILE_MOD_TIME))

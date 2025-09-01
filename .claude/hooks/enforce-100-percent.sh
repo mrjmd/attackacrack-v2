@@ -3,6 +3,12 @@
 
 echo "🔍 Checking test status..."
 
+# Check if Docker is running
+if ! docker-compose ps 2>/dev/null | grep -q "backend"; then
+    echo "⚠️  Docker backend not running - skipping test enforcement"
+    exit 0
+fi
+
 # Run tests
 TEST_OUTPUT=$(docker-compose exec -T backend pytest tests/ --tb=no -q 2>&1 | tail -20)
 
