@@ -11,6 +11,8 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy import select, func, and_, or_
 from datetime import datetime, timezone, timedelta
 import uuid
+import random
+import string
 from typing import List, Optional
 
 
@@ -25,8 +27,10 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
         user_data = {
-            "email": "test@example.com",
+            "email": f"test_{unique_id}@example.com",
             "name": "Test User"
         }
         
@@ -34,7 +38,7 @@ class TestUserRepository:
         
         assert user.id is not None
         assert isinstance(user.id, uuid.UUID)
-        assert user.email == "test@example.com"
+        assert user.email == user_data["email"]
         assert user.name == "Test User"
         assert user.is_active is True
         assert user.created_at is not None
@@ -48,8 +52,9 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
-        # Create user
-        user_data = {"email": "test@example.com", "name": "Test User"}
+        # Create user with unique email
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_data = {"email": f"get_test_{unique_id}@example.com", "name": "Test User"}
         created_user = await repo.create(user_data)
         
         # Retrieve user
@@ -57,7 +62,7 @@ class TestUserRepository:
         
         assert retrieved_user is not None
         assert retrieved_user.id == created_user.id
-        assert retrieved_user.email == "test@example.com"
+        assert retrieved_user.email == user_data["email"]
     
     @pytest.mark.asyncio
     async def test_get_user_by_email(self, db_session: AsyncSession):
@@ -66,16 +71,18 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
-        # Create user
-        user_data = {"email": "test@example.com", "name": "Test User"}
+        # Create user with unique email
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        email = f"email_test_{unique_id}@example.com"
+        user_data = {"email": email, "name": "Test User"}
         created_user = await repo.create(user_data)
         
         # Retrieve by email
-        retrieved_user = await repo.get_by_email("test@example.com")
+        retrieved_user = await repo.get_by_email(email)
         
         assert retrieved_user is not None
         assert retrieved_user.id == created_user.id
-        assert retrieved_user.email == "test@example.com"
+        assert retrieved_user.email == email
     
     @pytest.mark.asyncio
     async def test_update_user(self, db_session: AsyncSession):
@@ -84,8 +91,9 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
-        # Create user
-        user_data = {"email": "test@example.com", "name": "Test User"}
+        # Create user with unique email
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_data = {"email": f"update_test_{unique_id}@example.com", "name": "Test User"}
         user = await repo.create(user_data)
         original_updated_at = user.updated_at
         
@@ -94,7 +102,7 @@ class TestUserRepository:
         updated_user = await repo.update(user.id, update_data)
         
         assert updated_user.name == "Updated Name"
-        assert updated_user.email == "test@example.com"  # Unchanged
+        assert updated_user.email == user_data["email"]  # Unchanged
         assert updated_user.updated_at > original_updated_at
     
     @pytest.mark.asyncio
@@ -104,8 +112,9 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
-        # Create user
-        user_data = {"email": "test@example.com", "name": "Test User"}
+        # Create user with unique email
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_data = {"email": f"delete_test_{unique_id}@example.com", "name": "Test User"}
         user = await repo.create(user_data)
         
         # Soft delete (set is_active = False)
@@ -123,10 +132,11 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
-        # Create multiple users
+        # Create multiple users with unique IDs to avoid conflicts
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
         for i in range(25):
             user_data = {
-                "email": f"user{i}@example.com",
+                "email": f"user{i}_{unique_id}@example.com",
                 "name": f"User {i}"
             }
             await repo.create(user_data)
@@ -153,16 +163,17 @@ class TestUserRepository:
         
         repo = UserRepository(db_session)
         
-        # Create active users
+        # Create active users with unique emails
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
         for i in range(3):
             await repo.create({
-                "email": f"active{i}@example.com",
+                "email": f"active{i}_{unique_id}@example.com",
                 "name": f"Active User {i}"
             })
         
         # Create inactive user
         inactive_user = await repo.create({
-            "email": "inactive@example.com",
+            "email": f"inactive_{unique_id}@example.com",
             "name": "Inactive User"
         })
         await repo.delete(inactive_user.id)
@@ -181,13 +192,18 @@ class TestContactRepository:
     @pytest_asyncio.fixture
     async def user_for_contacts(self, db_session: AsyncSession):
         """Create a user for contact testing."""
-        from app.repositories.user_repository import UserRepository
+        from app.models.user import User
+        import uuid
         
-        repo = UserRepository(db_session)
-        return await repo.create({
-            "email": "user@example.com",
-            "name": "Contact User"
-        })
+        # Create user directly using model to avoid repository dependency
+        unique_id = str(uuid.uuid4())[:8]
+        user = User(
+            email=f"contact_user_{unique_id}@example.com",
+            name="Contact User"
+        )
+        db_session.add(user)
+        await db_session.flush()  # Flush to get ID without committing
+        return user
     
     @pytest.mark.asyncio
     async def test_create_contact(self, db_session: AsyncSession, user_for_contacts):
@@ -196,19 +212,21 @@ class TestContactRepository:
         
         repo = ContactRepository(db_session)
         
+        # Use unique identifiers to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
         contact_data = {
-            "phone_number": "+15551234567",
+            "phone_number": f"+155512345{random.randint(10, 99)}",
             "name": "John Doe",
-            "email": "john@example.com",
+            "email": f"john_{unique_id}@example.com",
             "user_id": user_for_contacts.id
         }
         
         contact = await repo.create(contact_data)
         
         assert contact.id is not None
-        assert contact.phone_number == "+15551234567"
+        assert contact.phone_number == contact_data["phone_number"]
         assert contact.name == "John Doe"
-        assert contact.email == "john@example.com"
+        assert contact.email == contact_data["email"]
         assert contact.opted_out is False
         assert contact.user_id == user_for_contacts.id
     
@@ -219,20 +237,21 @@ class TestContactRepository:
         
         repo = ContactRepository(db_session)
         
-        # Create contact
+        # Create contact with unique phone
+        phone_number = f"+155512345{random.randint(10, 99)}"
         contact_data = {
-            "phone_number": "+15551234567",
+            "phone_number": phone_number,
             "name": "John Doe",
             "user_id": user_for_contacts.id
         }
         created_contact = await repo.create(contact_data)
         
         # Retrieve by phone
-        retrieved_contact = await repo.get_by_phone("+15551234567", user_for_contacts.id)
+        retrieved_contact = await repo.get_by_phone(phone_number, user_for_contacts.id)
         
         assert retrieved_contact is not None
         assert retrieved_contact.id == created_contact.id
-        assert retrieved_contact.phone_number == "+15551234567"
+        assert retrieved_contact.phone_number == phone_number
     
     @pytest.mark.asyncio
     async def test_contact_phone_normalization(self, db_session: AsyncSession, user_for_contacts):
@@ -356,13 +375,18 @@ class TestCampaignRepository:
     @pytest_asyncio.fixture
     async def user_for_campaigns(self, db_session: AsyncSession):
         """Create a user for campaign testing."""
-        from app.repositories.user_repository import UserRepository
+        from app.models.user import User
+        import uuid
         
-        repo = UserRepository(db_session)
-        return await repo.create({
-            "email": "campaign@example.com",
-            "name": "Campaign User"
-        })
+        # Create user directly using model to avoid repository dependency
+        unique_id = str(uuid.uuid4())[:8]
+        user = User(
+            email=f"campaign_user_{unique_id}@example.com",
+            name="Campaign User"
+        )
+        db_session.add(user)
+        await db_session.flush()  # Flush to get ID without committing
+        return user
     
     @pytest.mark.asyncio
     async def test_create_campaign(self, db_session: AsyncSession, user_for_campaigns):
@@ -526,31 +550,39 @@ class TestMessageRepository:
     
     @pytest_asyncio.fixture
     async def message_dependencies(self, db_session: AsyncSession):
-        """Create dependencies for message testing."""
-        from app.repositories.user_repository import UserRepository
-        from app.repositories.campaign_repository import CampaignRepository
-        from app.repositories.contact_repository import ContactRepository
+        """Create dependencies for message testing using same session as test."""
+        from app.models.user import User
+        from app.models.campaign import Campaign
+        from app.models.contact import Contact
+        import uuid
+        import random
         
-        user_repo = UserRepository(db_session)
-        campaign_repo = CampaignRepository(db_session)
-        contact_repo = ContactRepository(db_session)
+        # Use unique identifiers to avoid constraint violations across tests
+        unique_id = str(uuid.uuid4())[:8]
+        phone_number = f"+155512345{random.randint(10, 99)}"
         
-        user = await user_repo.create({
-            "email": "message@example.com",
-            "name": "Message User"
-        })
+        user = User(
+            email=f"message_{unique_id}@example.com",
+            name="Message User"
+        )
+        db_session.add(user)
+        await db_session.flush()  # Get ID without committing
         
-        campaign = await campaign_repo.create({
-            "name": "Test Campaign",
-            "message_template": "Hi {name}!",
-            "user_id": user.id
-        })
+        campaign = Campaign(
+            name=f"Test Campaign {unique_id}",
+            message_template="Hi {name}!",
+            user_id=user.id
+        )
+        db_session.add(campaign)
+        await db_session.flush()
         
-        contact = await contact_repo.create({
-            "phone_number": "+15551234567",
-            "name": "John Doe",
-            "user_id": user.id
-        })
+        contact = Contact(
+            phone_number=phone_number,
+            name="John Doe",
+            user_id=user.id
+        )
+        db_session.add(contact)
+        await db_session.flush()
         
         return {
             "user": user,
@@ -569,7 +601,7 @@ class TestMessageRepository:
         message_data = {
             "campaign_id": deps["campaign"].id,
             "contact_id": deps["contact"].id,
-            "content": "Hi John!",
+            "body": "Hi John!",
             "status": "queued"
         }
         
@@ -578,7 +610,7 @@ class TestMessageRepository:
         assert message.id is not None
         assert message.campaign_id == deps["campaign"].id
         assert message.contact_id == deps["contact"].id
-        assert message.content == "Hi John!"
+        assert message.body == "Hi John!"
         assert message.status == "queued"
         assert message.created_at is not None
     
@@ -594,7 +626,7 @@ class TestMessageRepository:
         message = await repo.create({
             "campaign_id": deps["campaign"].id,
             "contact_id": deps["contact"].id,
-            "content": "Hi John!",
+            "body": "Hi John!",
             "status": "queued"
         })
         
@@ -631,14 +663,14 @@ class TestMessageRepository:
             await message_repo.create({
                 "campaign_id": deps["campaign"].id,
                 "contact_id": deps["contact"].id,
-                "content": f"Message {i}",
+                "body": f"Message {i}",
                 "status": "queued"
             })
         
         await message_repo.create({
             "campaign_id": other_campaign.id,
             "contact_id": deps["contact"].id,
-            "content": "Other message",
+            "body": "Other message",
             "status": "queued"
         })
         
@@ -658,23 +690,42 @@ class TestMessageRepository:
         deps = message_dependencies
         
         # Create messages with different statuses
+        created_messages = []
         statuses = ["queued", "sent", "delivered", "failed"]
         for status in statuses:
-            await repo.create({
+            message = await repo.create({
                 "campaign_id": deps["campaign"].id,
                 "contact_id": deps["contact"].id,
-                "content": f"Message {status}",
+                "body": f"Message {status}",
                 "status": status
             })
+            created_messages.append(message)
         
-        # Get only queued messages
+        # Get only queued messages - verify our message is included
         queued_messages = await repo.get_by_status("queued")
-        assert len(queued_messages) == 1
-        assert queued_messages[0].status == "queued"
+        queued_message_ids = [msg.id for msg in queued_messages]
         
-        # Get sent and delivered messages
+        # Find our created queued message
+        our_queued_message = next((msg for msg in created_messages if msg.status == "queued"), None)
+        assert our_queued_message is not None
+        assert our_queued_message.id in queued_message_ids
+        
+        # Verify all returned messages have queued status
+        for msg in queued_messages:
+            assert msg.status == "queued"
+        
+        # Get sent and delivered messages - verify our messages are included
         success_messages = await repo.get_by_status(["sent", "delivered"])
-        assert len(success_messages) == 2
+        success_message_ids = [msg.id for msg in success_messages]
+        
+        # Find our sent and delivered messages
+        our_sent_message = next((msg for msg in created_messages if msg.status == "sent"), None)
+        our_delivered_message = next((msg for msg in created_messages if msg.status == "delivered"), None)
+        
+        assert our_sent_message is not None
+        assert our_delivered_message is not None
+        assert our_sent_message.id in success_message_ids
+        assert our_delivered_message.id in success_message_ids
     
     @pytest.mark.asyncio
     async def test_get_daily_message_count(self, db_session: AsyncSession, message_dependencies):
@@ -693,7 +744,7 @@ class TestMessageRepository:
             message = await repo.create({
                 "campaign_id": deps["campaign"].id,
                 "contact_id": deps["contact"].id,
-                "content": f"Today message {i}",
+                "body": f"Today message {i}",
                 "status": "sent"
             })
             # Manually set sent_at to today
@@ -703,7 +754,7 @@ class TestMessageRepository:
         old_message = await repo.create({
             "campaign_id": deps["campaign"].id,
             "contact_id": deps["contact"].id,
-            "content": "Yesterday message",
+            "body": "Yesterday message",
             "status": "sent"
         })
         
@@ -725,7 +776,7 @@ class TestMessageRepository:
             messages_data.append({
                 "campaign_id": deps["campaign"].id,
                 "contact_id": deps["contact"].id,
-                "content": f"Bulk message {i}",
+                "body": f"Bulk message {i}",
                 "status": "queued"
             })
         

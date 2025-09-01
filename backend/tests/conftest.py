@@ -67,67 +67,29 @@ async def app():
     return app
 
 
-@pytest_asyncio.fixture
-async def clear_database(db_engine):
-    """Clear all data between tests for isolation."""
-    try:
-        from app.models import User, Contact, Campaign, Message, WebhookEvent
-        from sqlalchemy.orm import sessionmaker
-        from sqlalchemy.ext.asyncio import AsyncSession
-        
-        # Create temporary session to clear data
-        TestSessionLocal = sessionmaker(
-            db_engine,
-            class_=AsyncSession,
-            expire_on_commit=False
-        )
-        
-        async with TestSessionLocal() as session:
-            # Delete all data in correct order (handle foreign keys)
-            await session.execute(Message.__table__.delete())
-            await session.execute(WebhookEvent.__table__.delete())
-            await session.execute(Campaign.__table__.delete())
-            await session.execute(Contact.__table__.delete())
-            await session.execute(User.__table__.delete())
-            await session.commit()
-    except Exception:
-        # Ignore cleanup errors during setup
-        pass
-    
-    yield
-    
-    # Clean up after test
-    try:
-        async with TestSessionLocal() as session:
-            # Delete all data in correct order (handle foreign keys)
-            await session.execute(Message.__table__.delete())
-            await session.execute(WebhookEvent.__table__.delete())
-            await session.execute(Campaign.__table__.delete())
-            await session.execute(Contact.__table__.delete())
-            await session.execute(User.__table__.delete())
-            await session.commit()
-    except Exception:
-        # Ignore cleanup errors
-        pass
+# Removed clear_database fixture - db_session transaction rollback provides isolation
 
 
 @pytest_asyncio.fixture
-async def client(app, db_engine, clear_database) -> AsyncGenerator[AsyncClient, None]:
-    """Create async HTTP client for API testing with PROPER isolation."""
+async def client(app, db_engine) -> AsyncGenerator[AsyncClient, None]:
+    """Create async HTTP client for API testing."""
     from app.core.database import get_db
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.asyncio import AsyncSession
     
-    # Create a session factory using the test engine
+    # Always clear any existing overrides first
+    app.dependency_overrides.clear()
+    
+    # Create session factory for API calls
     TestSessionLocal = sessionmaker(
         db_engine,
         class_=AsyncSession,
         expire_on_commit=False
     )
     
-    # Override the get_db dependency to use test engine
+    # Override the get_db dependency
     async def override_get_db():
-        """Provide clean database session for each request."""
+        """Provide database session for API calls."""
         async with TestSessionLocal() as session:
             yield session
     
@@ -203,21 +165,27 @@ async def db_engine():
 
 @pytest_asyncio.fixture
 async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
-    """Create database session with automatic rollback."""
+    """Create database session for testing."""
     async_session = sessionmaker(
         db_engine, class_=AsyncSession, expire_on_commit=False
     )
     
     async with async_session() as session:
-        # Start transaction
-        transaction = await session.begin()
-        
         try:
             yield session
         finally:
-            # Always rollback to keep tests isolated
-            if transaction.is_active:
-                await transaction.rollback()
+            # Clean up after each test by deleting all data
+            try:
+                from app.models import User, Contact, Campaign, Message, WebhookEvent
+                # Delete in correct order due to foreign keys
+                await session.execute(Message.__table__.delete())
+                await session.execute(WebhookEvent.__table__.delete())
+                await session.execute(Campaign.__table__.delete())
+                await session.execute(Contact.__table__.delete())
+                await session.execute(User.__table__.delete())
+                await session.commit()
+            except Exception:
+                await session.rollback()
 
 
 @pytest_asyncio.fixture
@@ -228,8 +196,21 @@ async def db_session_commit(db_engine) -> AsyncGenerator[AsyncSession, None]:
     )
     
     async with async_session() as session:
-        yield session
-        # Let the test handle commit/rollback
+        try:
+            yield session
+        finally:
+            # Clean up after transaction tests
+            try:
+                from app.models import User, Contact, Campaign, Message, WebhookEvent
+                # Delete all data created during the test
+                await session.execute(Message.__table__.delete())
+                await session.execute(WebhookEvent.__table__.delete())
+                await session.execute(Campaign.__table__.delete())
+                await session.execute(Contact.__table__.delete())
+                await session.execute(User.__table__.delete())
+                await session.commit()
+            except Exception:
+                await session.rollback()
 
 
 @pytest.fixture
@@ -307,28 +288,20 @@ async def webhook_test_setup(client: AsyncClient, webhook_signature):
 
 
 @pytest_asyncio.fixture
-async def test_user(db_engine):
-    """Create a test user for each test."""
+async def test_user(db_session):
+    """Create a test user within the test transaction."""
     from app.models import User
-    from sqlalchemy.ext.asyncio import AsyncSession
-    from sqlalchemy.orm import sessionmaker
+    import uuid
     
-    # Use the same engine but create our own session for user creation
-    TestSessionLocal = sessionmaker(
-        db_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
+    # Create user within the test transaction so it gets cleaned up automatically
+    unique_id = str(uuid.uuid4())[:8]
+    user = User(
+        email=f"test_{unique_id}@example.com",
+        name="Test User",
+        is_active=True
     )
+    db_session.add(user)
+    await db_session.commit()  # Commit within test transaction
+    await db_session.refresh(user)  # Refresh to get the ID
     
-    async with TestSessionLocal() as session:
-        user = User(
-            email="test@example.com",
-            name="Test User",
-            is_active=True
-        )
-        session.add(user)
-        await session.commit()
-        await session.refresh(user)  # Get the ID
-        
-        # Return the user - it will be cleaned up by clear_database
-        return user
+    return user

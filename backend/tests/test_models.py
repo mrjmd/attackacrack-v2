@@ -12,6 +12,8 @@ from sqlalchemy import select, func, text
 from datetime import datetime, timezone
 import uuid
 from typing import AsyncGenerator
+import random
+import string
 
 
 class TestUserModel:
@@ -22,8 +24,12 @@ class TestUserModel:
         """Test User model can be created with required fields."""
         from app.models.user import User
         
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        email = f"test_{unique_id}@example.com"
+        
         user = User(
-            email="test@example.com",
+            email=email,
             name="Test User"
         )
         
@@ -33,7 +39,7 @@ class TestUserModel:
         
         assert user.id is not None
         assert isinstance(user.id, uuid.UUID)
-        assert user.email == "test@example.com"
+        assert user.email == email
         assert user.name == "Test User"
         assert user.is_active is True
         assert user.created_at is not None
@@ -44,13 +50,17 @@ class TestUserModel:
         """Test User email must be unique."""
         from app.models.user import User
         
+        # Use unique email for this test
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        email = f"unique_{unique_id}@example.com"
+        
         # Create first user
-        user1 = User(email="test@example.com", name="User 1")
+        user1 = User(email=email, name="User 1")
         db_session.add(user1)
         await db_session.commit()
         
         # Try to create second user with same email
-        user2 = User(email="test@example.com", name="User 2")
+        user2 = User(email=email, name="User 2")
         db_session.add(user2)
         
         with pytest.raises(IntegrityError):
@@ -61,24 +71,30 @@ class TestUserModel:
         """Test User email format validation at database level."""
         from app.models.user import User
         
-        # This will depend on model implementation
-        # For now, test that email field accepts valid emails
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        email = f"valid.email+tag_{unique_id}@example.co.uk"
+        
         user = User(
-            email="valid.email+tag@example.co.uk",
+            email=email,
             name="Test User"
         )
         
         db_session.add(user)
         await db_session.commit()
         
-        assert user.email == "valid.email+tag@example.co.uk"
+        assert user.email == email
     
     @pytest.mark.asyncio
     async def test_user_timestamps_auto_update(self, db_session: AsyncSession):
         """Test User timestamps are automatically managed."""
         from app.models.user import User
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        email = f"timestamp_{unique_id}@example.com"
+        
+        user = User(email=email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
@@ -97,7 +113,11 @@ class TestUserModel:
         """Test User soft delete with is_active flag."""
         from app.models.user import User
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        email = f"soft_delete_{unique_id}@example.com"
+        
+        user = User(email=email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
@@ -120,17 +140,22 @@ class TestContactModel:
         from app.models.user import User
         from app.models.contact import Contact
         
-        # Create user first
-        user = User(email="test@example.com", name="Test User")
+        # Create user first with unique email
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"contact_test_{unique_id}@example.com"
+        contact_email = f"john_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         await db_session.refresh(user)
         
         # Create contact
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
-            email="john@example.com",
+            email=contact_email,
             user_id=user.id
         )
         
@@ -140,9 +165,9 @@ class TestContactModel:
         
         assert contact.id is not None
         assert isinstance(contact.id, uuid.UUID)
-        assert contact.phone_number == "+15551234567"
+        assert contact.phone_number == phone_number
         assert contact.name == "John Doe"
-        assert contact.email == "john@example.com"
+        assert contact.email == contact_email
         assert contact.opted_out is False
         assert contact.opted_out_at is None
         assert contact.user_id == user.id
@@ -153,21 +178,27 @@ class TestContactModel:
         from app.models.user import User
         from app.models.contact import Contact
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"phone_test_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         # Test various phone formats that should normalize to E.164
+        # Use different numbers to avoid unique constraint violations
+        base_number = random.randint(1000000, 9999999)
         phone_tests = [
-            ("+15551234567", "+15551234567"),  # Already E.164
-            ("5551234567", "+15551234567"),    # Add country code
-            ("(555) 123-4567", "+15551234567"), # Format normalization
+            (f"+1555{base_number}", f"+1555{base_number}"),  # Already E.164
+            (f"555{base_number+1}", f"+1555{base_number+1}"),    # Add country code
+            (f"(555) {str(base_number+2)[:3]}-{str(base_number+2)[3:]}", f"+1555{base_number+2}"), # Format normalization
         ]
         
-        for input_phone, expected_phone in phone_tests:
+        for i, (input_phone, expected_phone) in enumerate(phone_tests):
             contact = Contact(
                 phone_number=input_phone,
-                name=f"Test {input_phone}",
+                name=f"Test Contact {i}",
                 user_id=user.id
             )
             
@@ -181,13 +212,18 @@ class TestContactModel:
         from app.models.user import User
         from app.models.contact import Contact
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email and phone to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"phone_unique_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         # Create first contact
         contact1 = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -196,7 +232,7 @@ class TestContactModel:
         
         # Try to create second contact with same phone
         contact2 = Contact(
-            phone_number="+15551234567", 
+            phone_number=phone_number, 
             name="Jane Doe",
             user_id=user.id
         )
@@ -211,12 +247,17 @@ class TestContactModel:
         from app.models.user import User
         from app.models.contact import Contact
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique identifiers to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"opt_out_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe", 
             user_id=user.id
         )
@@ -238,12 +279,17 @@ class TestContactModel:
         from app.models.user import User
         from app.models.contact import Contact
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique identifiers to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"relationship_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -253,7 +299,7 @@ class TestContactModel:
         # Test relationship loading
         await db_session.refresh(contact, ["user"])
         assert contact.user is not None
-        assert contact.user.email == "test@example.com"
+        assert contact.user.email == user_email
 
 
 class TestCampaignModel:
@@ -265,7 +311,11 @@ class TestCampaignModel:
         from app.models.user import User
         from app.models.campaign import Campaign
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"campaign_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
@@ -295,7 +345,11 @@ class TestCampaignModel:
         from app.models.user import User
         from app.models.campaign import Campaign
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"status_enum_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
@@ -303,7 +357,7 @@ class TestCampaignModel:
         
         for status in valid_statuses:
             campaign = Campaign(
-                name=f"Campaign {status}",
+                name=f"Campaign {status} {unique_id}",
                 message_template="Template",
                 status=status,
                 user_id=user.id
@@ -325,7 +379,11 @@ class TestCampaignModel:
         from app.models.user import User
         from app.models.campaign import Campaign
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"daily_limit_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
@@ -348,7 +406,11 @@ class TestCampaignModel:
         from app.models.user import User
         from app.models.campaign import Campaign
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"date_fields_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
@@ -376,7 +438,11 @@ class TestCampaignModel:
         from app.models.user import User
         from app.models.campaign import Campaign
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"campaign_rel_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
@@ -391,7 +457,7 @@ class TestCampaignModel:
         # Test relationship loading
         await db_session.refresh(campaign, ["user"])
         assert campaign.user is not None
-        assert campaign.user.email == "test@example.com"
+        assert campaign.user.email == user_email
 
 
 class TestMessageModel:
@@ -405,13 +471,17 @@ class TestMessageModel:
         from app.models.contact import Contact
         from app.models.message import Message
         
-        # Create dependencies
-        user = User(email="test@example.com", name="Test User")
+        # Create dependencies with unique identifiers
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"message_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         campaign = Campaign(
-            name="Test Campaign",
+            name=f"Test Campaign {unique_id}",
             message_template="Template",
             user_id=user.id
         )
@@ -419,7 +489,7 @@ class TestMessageModel:
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -454,13 +524,17 @@ class TestMessageModel:
         from app.models.contact import Contact
         from app.models.message import Message
         
-        # Create dependencies
-        user = User(email="test@example.com", name="Test User")
+        # Create dependencies with unique identifiers
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"msg_status_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         campaign = Campaign(
-            name="Test Campaign",
+            name=f"Test Campaign {unique_id}",
             message_template="Template", 
             user_id=user.id
         )
@@ -468,7 +542,7 @@ class TestMessageModel:
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -477,11 +551,11 @@ class TestMessageModel:
         
         valid_statuses = ["queued", "sent", "delivered", "failed"]
         
-        for status in valid_statuses:
+        for i, status in enumerate(valid_statuses):
             message = Message(
                 campaign_id=campaign.id,
                 contact_id=contact.id,
-                content=f"Message {status}",
+                content=f"Message {status} {i}",
                 status=status
             )
             
@@ -499,13 +573,17 @@ class TestMessageModel:
         from app.models.contact import Contact
         from app.models.message import Message
         
-        # Create dependencies
-        user = User(email="test@example.com", name="Test User")
+        # Create dependencies with unique identifiers
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"msg_timestamp_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         campaign = Campaign(
-            name="Test Campaign",
+            name=f"Test Campaign {unique_id}",
             message_template="Template",
             user_id=user.id
         )
@@ -513,7 +591,7 @@ class TestMessageModel:
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -558,13 +636,18 @@ class TestMessageModel:
         from app.models.contact import Contact
         from app.models.message import Message
         
-        # Create dependencies
-        user = User(email="test@example.com", name="Test User")
+        # Create dependencies with unique identifiers
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"msg_rel_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        campaign_name = f"Test Campaign {unique_id}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         campaign = Campaign(
-            name="Test Campaign",
+            name=campaign_name,
             message_template="Template",
             user_id=user.id
         )
@@ -572,7 +655,7 @@ class TestMessageModel:
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -592,7 +675,7 @@ class TestMessageModel:
         # Test relationships
         await db_session.refresh(message, ["campaign", "contact"])
         assert message.campaign is not None
-        assert message.campaign.name == "Test Campaign"
+        assert message.campaign.name == campaign_name
         assert message.contact is not None
         assert message.contact.name == "John Doe"
 
@@ -704,14 +787,19 @@ class TestModelRelationships:
         from app.models.user import User
         from app.models.contact import Contact
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"user_contacts_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
-        # Create multiple contacts
+        # Create multiple contacts with unique phone numbers
+        base_phone = random.randint(1000000, 9999999)
         for i in range(3):
             contact = Contact(
-                phone_number=f"+155512345{i:02d}",
+                phone_number=f"+1555{base_phone + i}",
                 name=f"Contact {i}",
                 user_id=user.id
             )
@@ -729,14 +817,18 @@ class TestModelRelationships:
         from app.models.user import User
         from app.models.campaign import Campaign
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique email to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"user_campaigns_{unique_id}@example.com"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
-        # Create multiple campaigns
+        # Create multiple campaigns with unique names
         for i in range(2):
             campaign = Campaign(
-                name=f"Campaign {i}",
+                name=f"Campaign {i} {unique_id}",
                 message_template=f"Template {i}",
                 user_id=user.id
             )
@@ -756,12 +848,18 @@ class TestModelRelationships:
         from app.models.contact import Contact
         from app.models.message import Message
         
-        user = User(email="test@example.com", name="Test User")
+        # Use unique identifiers to avoid constraint violations
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"campaign_msg_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        campaign_name = f"Test Campaign {unique_id}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         campaign = Campaign(
-            name="Test Campaign",
+            name=campaign_name,
             message_template="Template",
             user_id=user.id
         )
@@ -769,7 +867,7 @@ class TestModelRelationships:
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe",
             user_id=user.id
         )
@@ -800,13 +898,18 @@ class TestModelRelationships:
         from app.models.contact import Contact
         from app.models.message import Message
         
-        # Create full hierarchy
-        user = User(email="test@example.com", name="Test User")
+        # Create full hierarchy with unique identifiers
+        unique_id = ''.join(random.choices(string.ascii_lowercase, k=8))
+        user_email = f"cascade_{unique_id}@example.com"
+        phone_number = f"+155512345{random.randint(10, 99)}"
+        campaign_name = f"Test Campaign {unique_id}"
+        
+        user = User(email=user_email, name="Test User")
         db_session.add(user)
         await db_session.commit()
         
         campaign = Campaign(
-            name="Test Campaign",
+            name=campaign_name,
             message_template="Template",
             user_id=user.id
         )
@@ -814,7 +917,7 @@ class TestModelRelationships:
         await db_session.commit()
         
         contact = Contact(
-            phone_number="+15551234567",
+            phone_number=phone_number,
             name="John Doe", 
             user_id=user.id
         )
@@ -830,13 +933,16 @@ class TestModelRelationships:
         db_session.add(message)
         await db_session.commit()
         
+        # Store campaign ID before deletion
+        campaign_id = campaign.id
+        
         # Delete campaign - should cascade to messages
         await db_session.delete(campaign)
         await db_session.commit()
         
         # Message should be deleted (if cascade configured)
         result = await db_session.execute(
-            select(Message).where(Message.campaign_id == campaign.id)
+            select(Message).where(Message.campaign_id == campaign_id)
         )
         messages = result.scalars().all()
         assert len(messages) == 0

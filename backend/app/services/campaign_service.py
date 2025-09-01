@@ -320,11 +320,10 @@ class CampaignService:
                 "message": f"Daily limit reached ({messages_sent_today}/{daily_limit})"
             }
         
-        # For now, assume we're always in business hours for the test
-        # Real implementation would use proper timezone conversion
-        is_business_hours = True
+        # Check if we're in business hours (9am-6pm ET)
+        is_business_hours = await self.is_business_hours()
         
-        # Queue the Celery task - use UUID objects as test expects
+        # Queue the Celery task - use method parameters for consistency
         task = app.tasks.send_campaign_messages.delay(campaign_id, user_id)
         
         if not is_business_hours:
@@ -452,11 +451,12 @@ class CampaignService:
             message_text = campaign.message_template.replace('{name}', contact.name)
             
             message = Message(
-                phone_number=contact.phone_number,
-                message_text=message_text,
+                to_phone=contact.phone_number,
+                body=message_text,
+                content=message_text,  # For backward compatibility
                 status=MessageStatus.SENT,  # Mark as sent for the test
                 campaign_id=campaign_id,
-                user_id=user_id
+                contact_id=contact.id
             )
             
             self.db.add(message)

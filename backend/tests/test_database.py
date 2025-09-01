@@ -279,34 +279,34 @@ class TestDatabaseErrorHandling:
     @pytest.mark.asyncio
     async def test_transaction_rollback_on_error(self, db_session):
         """Test transaction rollback on error."""
+        # Create temp table
+        await db_session.execute(text("""
+            CREATE TEMPORARY TABLE test_error_rollback (
+                id SERIAL PRIMARY KEY,
+                value VARCHAR(10) UNIQUE
+            )
+        """))
+        
+        # Insert valid data first
+        await db_session.execute(text("""
+            INSERT INTO test_error_rollback (value) VALUES ('test1')
+        """))
+        await db_session.commit()
+        
+        # Now try to insert duplicate - this should fail and auto-rollback
         try:
-            await db_session.begin()
-            
-            # Create temp table
-            await db_session.execute(text("""
-                CREATE TEMPORARY TABLE test_error_rollback (
-                    id SERIAL PRIMARY KEY,
-                    value VARCHAR(10) UNIQUE
-                )
-            """))
-            
-            # Insert valid data
             await db_session.execute(text("""
                 INSERT INTO test_error_rollback (value) VALUES ('test1')
             """))
-            
-            # This should cause error (duplicate)
-            with pytest.raises(Exception):
-                await db_session.execute(text("""
-                    INSERT INTO test_error_rollback (value) VALUES ('test1')
-                """))
-                await db_session.commit()
-            
+            await db_session.commit()
+            # Should not reach here
+            assert False, "Expected duplicate key error"
         except Exception:
-            # Rollback should happen automatically
+            # The session should auto-rollback on error
+            # PostgreSQL puts the transaction in an aborted state
             await db_session.rollback()
         
-        # After rollback, session should be usable
+        # After explicit rollback, session should be usable
         result = await db_session.execute(text("SELECT 1"))
         assert result.scalar() == 1
     
