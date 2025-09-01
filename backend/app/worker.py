@@ -26,7 +26,7 @@ celery_app = Celery(
     'webhook_processor',
     broker=settings.celery_broker_url,
     backend=settings.celery_result_backend,
-    include=['app.worker']
+    include=['app.worker', 'app.tasks']
 )
 
 # Configure Celery
@@ -38,6 +38,8 @@ celery_app.conf.update(
     enable_utc=True,
     task_routes={
         'app.worker.process_openphone_webhook': {'queue': 'webhooks'},
+        'app.tasks.send_campaign_messages': {'queue': 'campaigns'},
+        'app.tasks.check_daily_limits': {'queue': 'campaigns'},
     },
     task_default_retry_delay=60,  # 1 minute default retry delay
     task_max_retries=settings.celery_task_max_retries,

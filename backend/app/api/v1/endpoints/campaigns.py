@@ -323,6 +323,15 @@ async def send_campaign(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=str(e)
         )
+    except Exception as e:
+        # Temporary debug logging
+        import logging
+        logger = logging.getLogger(__name__)
+        logger.error(f"Unexpected error in send_campaign: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=f"Unexpected error: {str(e)}"
+        )
 
 
 @router.get("/{campaign_id}/stats", response_model=CampaignStatsResponse)

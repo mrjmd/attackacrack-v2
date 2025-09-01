@@ -68,8 +68,52 @@ async def app():
 
 
 @pytest_asyncio.fixture
-async def client(app, db_engine) -> AsyncGenerator[AsyncClient, None]:
-    """Create async HTTP client for API testing with database dependency override."""
+async def clear_database(db_engine):
+    """Clear all data between tests for isolation."""
+    try:
+        from app.models import User, Contact, Campaign, Message, WebhookEvent
+        from sqlalchemy.orm import sessionmaker
+        from sqlalchemy.ext.asyncio import AsyncSession
+        
+        # Create temporary session to clear data
+        TestSessionLocal = sessionmaker(
+            db_engine,
+            class_=AsyncSession,
+            expire_on_commit=False
+        )
+        
+        async with TestSessionLocal() as session:
+            # Delete all data in correct order (handle foreign keys)
+            await session.execute(Message.__table__.delete())
+            await session.execute(WebhookEvent.__table__.delete())
+            await session.execute(Campaign.__table__.delete())
+            await session.execute(Contact.__table__.delete())
+            await session.execute(User.__table__.delete())
+            await session.commit()
+    except Exception:
+        # Ignore cleanup errors during setup
+        pass
+    
+    yield
+    
+    # Clean up after test
+    try:
+        async with TestSessionLocal() as session:
+            # Delete all data in correct order (handle foreign keys)
+            await session.execute(Message.__table__.delete())
+            await session.execute(WebhookEvent.__table__.delete())
+            await session.execute(Campaign.__table__.delete())
+            await session.execute(Contact.__table__.delete())
+            await session.execute(User.__table__.delete())
+            await session.commit()
+    except Exception:
+        # Ignore cleanup errors
+        pass
+
+
+@pytest_asyncio.fixture
+async def client(app, db_engine, clear_database) -> AsyncGenerator[AsyncClient, None]:
+    """Create async HTTP client for API testing with PROPER isolation."""
     from app.core.database import get_db
     from sqlalchemy.orm import sessionmaker
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -81,14 +125,11 @@ async def client(app, db_engine) -> AsyncGenerator[AsyncClient, None]:
         expire_on_commit=False
     )
     
-    # Override the get_db dependency to use test database engine
+    # Override the get_db dependency to use test engine
     async def override_get_db():
+        """Provide clean database session for each request."""
         async with TestSessionLocal() as session:
-            try:
-                yield session
-            except Exception:
-                await session.rollback()
-                raise
+            yield session
     
     # Apply the override
     app.dependency_overrides[get_db] = override_get_db
@@ -112,7 +153,7 @@ def mock_settings():
     }
 
 
-@pytest_asyncio.fixture(scope="function")
+@pytest_asyncio.fixture(scope="session")
 async def db_engine():
     """Create test database engine with connection pooling."""
     # Use PostgreSQL for all tests - NEVER SQLite!
@@ -127,11 +168,12 @@ async def db_engine():
         echo=False,  # Set to True for SQL debugging
         pool_pre_ping=True,
         pool_recycle=3600,
-        pool_size=2,  # Smaller pool for tests
-        max_overflow=5
+        pool_size=10,  # Increase for parallel operations
+        max_overflow=20,
+        isolation_level="READ_COMMITTED"  # Ensure proper isolation
     )
     
-    # Create tables using our models
+    # Create tables using our models ONCE for the entire test session
     try:
         from app.models.base import Base
         # Import all models to ensure they're registered
@@ -147,12 +189,13 @@ async def db_engine():
     
     yield engine
     
-    # Cleanup
+    # Cleanup - Drop tables at end of session
     try:
         from app.models.base import Base
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.drop_all)
-    except:
+    except Exception:
+        # Ignore cleanup errors
         pass
     
     await engine.dispose()
@@ -264,16 +307,28 @@ async def webhook_test_setup(client: AsyncClient, webhook_signature):
 
 
 @pytest_asyncio.fixture
-async def test_user(db_session_commit: AsyncSession):
-    """Create a test user for webhook tests."""
+async def test_user(db_engine):
+    """Create a test user for each test."""
     from app.models import User
+    from sqlalchemy.ext.asyncio import AsyncSession
+    from sqlalchemy.orm import sessionmaker
     
-    user = User(
-        email="test@example.com",
-        name="Test User",
-        is_active=True
+    # Use the same engine but create our own session for user creation
+    TestSessionLocal = sessionmaker(
+        db_engine,
+        class_=AsyncSession,
+        expire_on_commit=False
     )
-    db_session_commit.add(user)
-    await db_session_commit.commit()
-    await db_session_commit.refresh(user)  # Get the ID
-    return user
+    
+    async with TestSessionLocal() as session:
+        user = User(
+            email="test@example.com",
+            name="Test User",
+            is_active=True
+        )
+        session.add(user)
+        await session.commit()
+        await session.refresh(user)  # Get the ID
+        
+        # Return the user - it will be cleaned up by clear_database
+        return user
