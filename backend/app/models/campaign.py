@@ -16,6 +16,7 @@ from .base import BaseModel
 if TYPE_CHECKING:
     from .user import User
     from .message import Message
+    from .list import List as PropertyList
 
 
 class CampaignStatus(str, enum.Enum):
@@ -103,6 +104,14 @@ class Campaign(BaseModel):
         index=True  # Index for user campaign queries
     )
     
+    # Optional source list for property-based campaigns
+    source_list_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("lists.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True  # List-based campaign queries
+    )
+    
     # Relationships
     user: Mapped["User"] = relationship(
         "User",
@@ -113,6 +122,12 @@ class Campaign(BaseModel):
         "Message",
         back_populates="campaign",
         cascade="all, delete-orphan"  # Delete messages when campaign deleted
+    )
+    
+    # Optional relationship to source property list
+    source_list: Mapped[Optional["PropertyList"]] = relationship(
+        "List",
+        back_populates="campaigns"
     )
     
     def is_active(self) -> bool:

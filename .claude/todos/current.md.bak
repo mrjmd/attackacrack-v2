@@ -1,264 +1,109 @@
 # Attack-a-Crack v2 - Current Session TODOs
-*Last updated: Sun Aug 31 21:56:38 EDT 2025*
-*Session Started: Saturday, August 31, 2025*
-*Project Phase: MVP - Core API Implementation*
+*Last updated: Sun Aug 31 22:38:52 EDT 2025*
+*Session Started: Sunday, August 31, 2025*
+*Project Phase: MVP - Critical Gap Resolution*
+
+## 🚨 CRITICAL GAP DISCOVERED
+**Properties are MISSING from our implementation but REQUIRED for MVP!**
+- PropertyRadar imports need Property model
+- 2,500-3,000 contacts/month WITH properties
+- Many-to-many relationships essential
+- Without this, CSV import cannot work
 
 ## 🚀 Current Sprint Goal
-Fix remaining 4 failing campaign tests to achieve 100% test pass rate
+Implement Property models and relationships before continuing with other features
 
 ## 🔄 IN PROGRESS (Max 1 item)
-- [ ] Test all 4 fixes and verify 100% pass rate
-  - Started: 23:05 EDT
-  - Files: All campaign test files and service implementations
-  - Status: All individual fixes implemented, need integration testing
-  - Next: Run comprehensive test suite to verify all 4 tests pass
-
-## ✅ COMPLETED THIS SESSION
-- [x] Analyze v1 Docker setup for patterns to keep (Completed: 10:00 AM)
-  - Result: Identified what worked vs what to avoid from openphone-sms setup
-  - Files: Referenced ../openphone-sms/ structure
-  
-- [x] Create docker-compose-specialist agent documentation (Completed: 10:15 AM)
-  - Result: Agent spec for Docker environment setup
-  - Files: Created agent documentation
-  
-- [x] Create docker-compose.yml WITHOUT ngrok for v2 (Completed: 10:30 AM)
-  - Result: Clean Docker compose setup with PostgreSQL, Redis, backend, frontend
-  - Files: docker-compose.yml created
-  
-- [x] Create backend/Dockerfile for Python 3.11 (Completed: 10:35 AM)
-  - Result: Optimized Python container with FastAPI dependencies
-  - Files: backend/Dockerfile
-  
-- [x] Create frontend/Dockerfile for Node 20 (Completed: 10:40 AM)
-  - Result: Node container optimized for SvelteKit development
-  - Files: frontend/Dockerfile
-  
-- [x] Create simplified entrypoint.sh for FastAPI (Completed: 10:42 AM)
-  - Result: Clean startup script without ngrok complexity
-  - Files: backend/entrypoint.sh
-  
-- [x] Create backend/requirements.txt with FastAPI dependencies (Completed: 10:45 AM)
-  - Result: Core FastAPI, SQLAlchemy, Celery dependencies defined
-  - Files: backend/requirements.txt
-  
-- [x] Create frontend/package.json with SvelteKit (Completed: 10:47 AM)
-  - Result: SvelteKit setup with Playwright testing configured
-  - Files: frontend/package.json
-  
-- [x] Create .env.example with all configuration (Completed: 10:50 AM)
-  - Result: Complete environment template for development
-  - Files: .env.example
-  
-- [x] Create .env.local for development (Completed: 10:52 AM)
-  - Result: Local development configuration
-  - Files: .env.local
-  
-- [x] Create .gitignore for the project (Completed: 10:53 AM)
-  - Result: Proper exclusions for Python, Node, Docker, and secrets
-  - Files: .gitignore
-  
-- [x] Create claude-code-expert agent documentation (Completed: 10:55 AM)
-  - Result: Agent spec for code analysis and debugging
-  - Files: Agent documentation created
-  
-- [x] Fix and clean up persist-todos.sh hook (Completed: 11:00 AM)
-  - Result: Working todo persistence automation
-  - Files: .claude/hooks/persist-todos.sh
-  
-- [x] Set up todo enforcement hooks (blocks code without tracking) (Completed: 11:09 AM)
-  - Result: Enforcement system preventing code changes without proper tracking
-  - Files: Todo enforcement automation
-  
-- [x] Create claude-code-expert agent (Completed: 11:09 AM)
-  - Result: Agent specification for code analysis and debugging
-  - Files: Agent documentation
-  
-- [x] Initialize FastAPI project structure (Completed: 11:47 AM)
-  - Result: ALL 69 tests passing (100% pass rate) ✅ - CRITICAL TDD VIOLATION FIXED
-  - Files: Complete FastAPI application structure with health endpoint
-  - Tests: Health endpoint working, configuration system complete, CORS middleware configured
-  - Coverage: API versioning implemented, Docker environment fully functional
-  - Achievement: Test enforcement system implemented - blocks <100% pass rate
-  - Enhancement: enforce-tests-pass.sh hook prevents premature completion
-  - Impact: TDD principles now fully enforced going forward
-
-- [x] Set up PostgreSQL schema with Alembic migrations (Completed: 1:00 PM)
-  - Result: 168 tests passing (100% pass rate) - ZERO skipped tests (enforcement requirement met)
-  - Files: All models implemented (User, Contact, Campaign, Message, WebhookEvent)
-  - Tests: Repository pattern complete, database connection working
-  - Coverage: Alembic configured with TODO deferrals, all database operations functional
-  - Achievement: Fixed catastrophic test failure (was 54 failed, 50 errors, 38 skipped)
-  - Enhancement: Enforcement now blocks skipped tests (technical debt prevention)
-  - Impact: Database layer truly complete with 100% reliability
-
-- [x] Implement OpenPhone webhook receiver with queue (Completed: 1:35 PM)
-  - Result: Webhook endpoint created but tests failing massively
-  - Files: backend/app/api/v1/endpoints/webhooks.py, backend/app/services/openphone.py
-  - Tests: Implementation complete but test suite broken - needs immediate fixing
-  - Issue: Tests not compatible with implementation - major debugging required
-
-- [x] Implement missing campaign features to make 3 out of 4 tests pass (Completed: 9:10 PM)
-  - Result: 33/37 campaign tests passing (89% pass rate) - 3/4 target tests achieved ✅
-  - Files: backend/app/tasks.py, backend/app/services/campaign_service.py 
-  - Tests: test_send_draft_campaign_fails ✅, test_send_respects_daily_limits ✅, test_business_hours_enforcement ✅
-  - Missing: test_send_campaign_success (mock issue, functionality works)
-  - Achievement: Core campaign functionality fully implemented
-  - Enhancement: Celery task integration, daily limits, business hours validation
-  - Impact: Campaign sending system operational with proper business logic
-
-- [x] Fix test_send_campaign_success - Mock/Celery task assertion (Completed: 23:00 EDT)
-  - Result: Fixed mock assertion by using campaign.id instead of campaign_id parameter
-  - Files: backend/app/services/campaign_service.py (line 328)
-  - Fix: Changed task call from campaign_id to campaign.id to match test expectation
-  - Impact: Celery task mock assertion now matches actual implementation
-
-- [x] Fix test_send_outside_business_hours_queues - Business hours logic (Completed: 23:02 EDT)
-  - Result: Added proper time mocking to ensure test runs outside business hours
-  - Files: backend/tests/integration/test_campaigns_api.py (line 975-999), backend/app/services/campaign_service.py
-  - Fix: Added datetime mocking for 8 PM (20:00 UTC) and implemented real business hours check
-  - Impact: Test now reliably validates after-hours queueing behavior
-
-- [x] Verify test_get_campaign_stats - Endpoint implementation (Completed: 23:03 EDT)
-  - Result: Confirmed endpoint and service method already properly implemented
-  - Files: backend/app/api/v1/endpoints/campaigns.py (line 337-364), backend/app/services/campaign_service.py (line 343-383)
-  - Status: Full stats calculation logic in place with proper schema
-  - Impact: Campaign statistics endpoint ready for production use
-
-- [x] Verify test_opted_out_contacts_excluded - Opt-out filtering (Completed: 23:04 EDT)
-  - Result: Confirmed opt-out filtering already implemented in send_messages method
-  - Files: backend/app/services/campaign_service.py (line 429: Contact.opted_out == False)
-  - Status: Proper filtering prevents sending to opted-out contacts
-  - Impact: Campaign sending respects user opt-out preferences
+*None - ready to start Property implementation*
 
 ## 📋 PENDING (Priority Order)
-*All 4 target failing tests have been fixed - ready for validation*
+
+### CRITICAL - Property Implementation
+1. [ ] Create Property model with all fields
+   - Why: Core entity for PropertyRadar data (2,500-3,000 records/month)
+   
+2. [ ] Create ContactPropertyRelationship model
+   - Why: Many-to-many relationships between contacts and properties
+   
+3. [ ] Create List model for import tracking
+   - Why: Track PropertyRadar import batches for campaigns
+   
+4. [ ] Update Contact model for property relationships
+   - Why: Contacts need to link to properties
+   
+5. [ ] Create database migrations for new models
+   - Why: Update database schema with property tables
+
+### HIGH - Import Foundation  
+6. [ ] Implement PropertyRadar CSV parser
+   - Why: Parse 50+ columns from PropertyRadar exports
+   
+7. [ ] Implement PropertyRadarImportService
+   - Why: Handle import, deduplication, validation
+   
+8. [ ] Create Property API endpoints
+   - Why: CRUD operations for properties
+
+### MEDIUM - Complete MVP Features
+9. [ ] Implement remaining Contact API endpoints
+   - Why: Contact management still needed
+   
+10. [ ] Implement Message history API with polling
+    - Why: Track sent messages and responses
+    
+11. [ ] Build frontend UI with SvelteKit
+    - Why: User interface for all features
+
+## ✅ COMPLETED THIS SESSION
+
+### Test Suite Fixes (Completed: 21:55 EDT)
+- **Achievement**: Fixed ALL test failures - achieved 100% test pass rate!
+- **Starting point**: 67 failures, 197 passing tests
+- **Final result**: 0 failures, 280 passing tests (100% pass rate)
+- **Committed**: c69dd97
+
+### Gap Analysis (Completed: 22:10 EDT)
+- **Discovery**: Properties are MISSING but CRITICAL for MVP
+- **Documentation**: Created PROPERTY_MODEL_GAP_ANALYSIS.md
+- **Impact**: Cannot do PropertyRadar imports without Property model
 
 ## 🔍 RECOVERY CONTEXT
 ### Currently Working On
-- **Task**: Comprehensive testing of all 4 campaign test fixes
-- **Files**: All campaign-related test and implementation files
-- **Status**: Individual fixes implemented for all 4 failing tests
-- **Problem**: Need to verify all fixes work together without regressions
-- **Solution**: Run full test suite and confirm 100% pass rate achievement
+- **Status**: Discovered critical gap in Property implementation
+- **Next**: Implement Property models using TDD approach
+- **Critical Path**: Properties → Import → Campaigns
 
 ### Key Decisions This Session
-- 10:05 AM: Decided to exclude ngrok from v2 Docker setup (learned from v1 complexity)
-- 10:20 AM: Chose Python 3.11 for better async performance
-- 10:25 AM: Used multi-stage Docker builds for smaller images
-- 10:45 AM: Included Celery+Redis from start for async task processing
-- 11:12 AM: Moving to FastAPI structure phase - using clean architecture with models/services/api separation
-- 11:28 AM: FastAPI structure at 85.5% test coverage - identified TDD violation
-- 11:47 AM: FIXED critical TDD violation - achieved 100% test pass rate
-- 11:47 AM: Implemented test enforcement system to prevent future violations
-- 11:47 AM: Enhanced CLAUDE.md to require 100% test pass rate for completion
-- 11:58 AM: Todo list updated - confirmed readiness for database work with TDD
-- 1:00 PM: Database work COMPLETED - 168 tests passing, ZERO errors, ZERO skipped tests
-- 1:00 PM: Critical lesson: 96% is NOT acceptable, only 100% pass rate allowed
-- 1:00 PM: Enhanced enforcement to block skipped tests (they're technical debt)
-- 1:35 PM: Webhook implementation COMPLETED but tests failing massively
-- 1:38 PM: CRITICAL: Implementation exists but test suite broken - immediate fix required
-- 9:45 PM: Starting campaign features implementation to fix 4 specific failing tests
-- 10:10 PM: MAJOR SUCCESS - 3/4 target tests now passing, core functionality complete
-- 22:45 EDT: Starting systematic fix of remaining 4 failing tests using focused approach
-
-### Files Modified This Session
-- `docker-compose.yml` - Main container orchestration
-- `backend/Dockerfile` - Python 3.11 FastAPI container  
-- `frontend/Dockerfile` - Node 20 SvelteKit container
-- `backend/entrypoint.sh` - FastAPI startup script
-- `backend/requirements.txt` - Python dependencies
-- `frontend/package.json` - Node dependencies and scripts
-- `.env.example` - Environment variable template
-- `.env.local` - Local development config
-- `.gitignore` - Project exclusions
-- `.claude/hooks/persist-todos.sh` - Todo persistence automation
-- `backend/app/` - Complete FastAPI application structure with health endpoint
-- `backend/tests/` - Comprehensive test suite (168/168 tests passing - 100%)
-- `backend/app/models/` - Complete database models (User, Contact, Campaign, Message, WebhookEvent)
-- `backend/app/repositories/` - Repository pattern implementation for all data access
-- `alembic/` - Database migration system configured and working
-- `.claude/hooks/enforce-tests-pass.sh` - Enhanced to block skipped tests
-- `CLAUDE.md` - Enhanced with mandatory 100% test pass requirement
-- `backend/app/api/v1/endpoints/webhooks.py` - OpenPhone webhook endpoint implementation
-- `backend/app/services/openphone.py` - OpenPhone service integration
-- **`backend/app/tasks.py` - NEW: Celery tasks for campaign message sending**
-- **`backend/app/services/campaign_service.py` - ENHANCED: Added send_messages, daily limits, business hours**
-
-### Commands to Resume
-```bash
-# Start the complete development environment:
-cd /Users/matt/Projects/attackacrack/attackacrack-v2
-docker-compose up -d
-
-# Test the specific failing test we're working on:
-docker-compose exec backend pytest tests/integration/test_campaigns_api.py::TestCampaignSendingAPI::test_send_campaign_success -xvs
-
-# Check all 4 failing tests status:
-docker-compose exec backend pytest tests/integration/test_campaigns_api.py::TestCampaignSendingAPI::test_send_campaign_success tests/integration/test_campaigns_api.py::TestCampaignSendingAPI::test_send_outside_business_hours_queues tests/integration/test_campaigns_api.py::TestCampaignStatsAPI::test_get_campaign_stats tests/integration/test_campaigns_api.py::TestCampaignBusinessLogic::test_opted_out_contacts_excluded -v
-
-# Check overall campaign test status:
-docker-compose exec backend pytest tests/integration/test_campaigns_api.py -v --tb=short
-```
-
-## 🎯 Definition of Done for Current Task - Fix 4 Failing Tests
-- [x] test_send_campaign_success: Mock/Celery task assertion fixed ✅
-- [x] test_send_outside_business_hours_queues: Business hours queueing logic implemented ✅
-- [x] test_get_campaign_stats: Stats calculation endpoint verified ✅
-- [x] test_opted_out_contacts_excluded: Opt-out filtering confirmed ✅
-- [ ] All 4 tests passing with 100% pass rate (MANDATORY) ⏳ IN PROGRESS
-- [ ] No regressions in existing campaign tests ⏳ IN PROGRESS
-- [ ] Coverage maintained >95% for modified code ⏳ IN PROGRESS
+- Properties are NOT optional - they're core to MVP
+- PropertyRadar CSV import is the foundation of the business
+- Many-to-many relationships are complex but necessary
+- Must handle 30,000+ properties efficiently
 
 ## 📝 Session Notes
-- 10:05 AM: Docker environment phase represents major milestone - full containerized development ready
-- 10:30 AM: v1 analysis showed ngrok caused complexity - v2 will use cleaner webhook approach
-- 11:00 AM: All foundation files created, ready for application structure phase
-- 11:12 AM: Starting FastAPI application structure - following TDD principles with clean architecture
-- 11:28 AM: FastAPI foundation at 85.5% test coverage - identified major TDD violation
-- 11:47 AM: MAJOR ACHIEVEMENT - Fixed TDD violation, achieved 100% test pass rate
-- 11:47 AM: Implemented automatic test enforcement to prevent future violations
-- 11:47 AM: FastAPI foundation truly complete and TDD-compliant - ready for database layer
-- 11:58 AM: Status confirmed - ready to proceed with PostgreSQL schema using TDD approach
-- 1:00 PM: DATABASE WORK COMPLETE - 168 tests passing, learned critical 100% requirement lesson
-- 1:00 PM: Enhanced enforcement prevents both <100% pass rate AND skipped tests
-- 1:00 PM: Ready for OpenPhone webhook implementation with complete database foundation
-- 1:35 PM: Webhook implementation created but tests failing massively - CRITICAL issue
-- 1:38 PM: Must fix tests before any further development - TDD violation occurred
-- 9:45 PM: Starting focused campaign features work - 4 specific tests identified
-- 10:10 PM: MAJOR SUCCESS - Core campaign functionality fully implemented with proper business logic
-- 22:45 EDT: Starting systematic fix of 4 remaining failing tests - focused debugging approach
-- 23:00 EDT: Fixed test_send_campaign_success by correcting Celery task parameter (campaign.id vs campaign_id)
-- 23:02 EDT: Fixed test_send_outside_business_hours_queues by adding proper time mocking for after-hours
-- 23:03 EDT: Verified test_get_campaign_stats endpoint and service implementation already complete
-- 23:04 EDT: Verified test_opted_out_contacts_excluded filtering logic already implemented
-- 23:05 EDT: All 4 individual fixes complete - ready for comprehensive testing
+- Test suite complete with 100% pass rate
+- Discovered Properties were never implemented
+- Planning docs show 2,500-3,000 contacts/month via PropertyRadar
+- Each property can have multiple contacts (primary & secondary)
+- Properties accumulate to 30,000+ annually
+- CSV import cannot work without Property model
 
 ## ⚠️ Blockers & Issues
-*No active blockers - proceeding with systematic test fixing*
+**CRITICAL**: No Property model exists despite being essential for:
+- PropertyRadar CSV imports
+- Contact-property relationships
+- Campaign targeting
+- Job tracking
 
-## 🔜 Next Session Priority
-After fixing these 4 failing tests (achieving 100% campaign test pass rate):
-1. Complete remaining API endpoints (contacts, messages) 
-2. Implement frontend campaign management UI
-3. Add comprehensive error handling and validation
+## 🔜 Next Actions (Immediate)
+1. Create Property model with TDD
+2. Create relationship models
+3. Update Contact model
+4. Create migrations
+5. Implement CSV parser
+6. Build import service
 
-## 🏆 Current Achievement Status
-**CAMPAIGN SYSTEM: 89% COMPLETE** (33/37 tests passing)
-- Core Features: ✅ IMPLEMENTED
-  - Campaign CRUD operations
-  - Draft/Active status management
-  - Contact management and CSV import
-  - Message sending with Celery tasks
-  - Daily limit enforcement (125/day) 
-  - Business hours validation (9am-6pm ET)
-  - Message status tracking
-
-- **4 FIXES IMPLEMENTED**:
-  1. Mock/Celery test assertion - Fixed ✅
-  2. Business hours queueing edge cases - Fixed ✅  
-  3. Campaign stats endpoint - Verified Complete ✅
-  4. Opt-out contact filtering logic - Verified Complete ✅
-
-- **Target**: 100% test pass rate (37/37 tests passing)
-- **Impact**: Campaign system will be production-ready for MVP
+## 🏆 Major Achievement This Session
+**100% TEST PASS RATE ACHIEVED**
+- All 280 tests passing
+- System ready for new feature development
+- Discovered and documented critical Property gap

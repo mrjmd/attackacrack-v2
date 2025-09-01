@@ -13,6 +13,7 @@ from .base import BaseModel
 if TYPE_CHECKING:
     from .contact import Contact
     from .campaign import Campaign
+    from .list import List as PropertyList
 
 
 class User(BaseModel):
@@ -63,6 +64,13 @@ class User(BaseModel):
         "Campaign",
         back_populates="user", 
         cascade="all, delete-orphan",  # Delete campaigns when user deleted
+        lazy="selectin"
+    )
+    
+    property_lists: Mapped[List["PropertyList"]] = relationship(
+        "List",
+        back_populates="user",
+        cascade="all, delete-orphan",  # Delete lists when user deleted
         lazy="selectin"
     )
     

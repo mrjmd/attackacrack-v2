@@ -9,6 +9,7 @@ import os
 import sys
 import pytest
 import pytest_asyncio
+from threading import Lock
 
 # Fix import path for tests
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -118,49 +119,71 @@ def mock_settings():
 @pytest_asyncio.fixture(scope="session")
 async def db_engine():
     """Create test database engine with connection pooling."""
-    # Use PostgreSQL for all tests - NEVER SQLite!
-    # As per CLAUDE.md database specialist rules
-    database_url = os.getenv(
-        "TEST_DATABASE_URL",
-        "postgresql+asyncpg://attackacrack:attackacrack_password@db:5432/attackacrack_test"
-    )
+    import uuid
+    import asyncpg
+    from sqlalchemy import text
+    
+    # Create a unique database name for this test session
+    unique_db = f"test_{str(uuid.uuid4()).replace('-', '_')[:8]}"
+    
+    # Base connection to create the test database
+    base_url = "postgresql+asyncpg://attackacrack:attackacrack_password@db:5432/postgres"
+    base_engine = create_async_engine(base_url)
+    
+    # Create unique test database (must be outside transaction)
+    async with base_engine.connect() as conn:
+        await conn.execute(text('COMMIT'))  # End any transaction
+        await conn.execute(text(f'CREATE DATABASE "{unique_db}"'))
+    
+    await base_engine.dispose()
+    
+    # Now connect to the unique test database
+    database_url = f"postgresql+asyncpg://attackacrack:attackacrack_password@db:5432/{unique_db}"
     
     engine = create_async_engine(
         database_url,
         echo=False,  # Set to True for SQL debugging
         pool_pre_ping=True,
         pool_recycle=3600,
-        pool_size=10,  # Increase for parallel operations
-        max_overflow=20,
+        pool_size=5,  # Smaller pool for unique database
+        max_overflow=10,
         isolation_level="READ_COMMITTED"  # Ensure proper isolation
     )
     
-    # Create tables using our models ONCE for the entire test session
+    # Database setup: Create tables in the fresh database
     try:
         from app.models.base import Base
-        # Import all models to ensure they're registered
-        from app.models import User, Contact, Campaign, Message, WebhookEvent
         
+        # Import all models to ensure they're registered with metadata
+        from app.models.property import Property, contact_property_association
+        from app.models import User, Contact, Campaign, Message, WebhookEvent, PropertyList
+        
+        # Create all tables normally - the unique database ensures no conflicts
         async with engine.begin() as conn:
-            # Drop all tables first to ensure clean state
-            await conn.run_sync(Base.metadata.drop_all)
             await conn.run_sync(Base.metadata.create_all)
+                
     except ImportError:
         # Models don't exist yet - this is expected in RED phase
         pass
     
     yield engine
     
-    # Cleanup - Drop tables at end of session
-    try:
-        from app.models.base import Base
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.drop_all)
-    except Exception:
-        # Ignore cleanup errors
-        pass
-    
+    # Cleanup: Close engine and drop the unique database
     await engine.dispose()
+    
+    # Clean up the unique test database
+    base_engine = create_async_engine(base_url)
+    async with base_engine.connect() as conn:
+        await conn.execute(text('COMMIT'))  # End any transaction
+        # Terminate connections to the database before dropping
+        await conn.execute(text(f"""
+            SELECT pg_terminate_backend(pid) 
+            FROM pg_stat_activity 
+            WHERE datname = '{unique_db}' AND pid <> pg_backend_pid()
+        """))
+        await conn.execute(text(f'DROP DATABASE IF EXISTS "{unique_db}"'))
+    
+    await base_engine.dispose()
 
 
 @pytest_asyncio.fixture
@@ -176,11 +199,16 @@ async def db_session(db_engine) -> AsyncGenerator[AsyncSession, None]:
         finally:
             # Clean up after each test by deleting all data
             try:
-                from app.models import User, Contact, Campaign, Message, WebhookEvent
-                # Delete in correct order due to foreign keys
+                from app.models import User, Contact, Campaign, Message, WebhookEvent, Property, PropertyList
+                from app.models.property import contact_property_association
+                
+                # Delete in correct order due to foreign key constraints
+                await session.execute(contact_property_association.delete())
                 await session.execute(Message.__table__.delete())
                 await session.execute(WebhookEvent.__table__.delete())
                 await session.execute(Campaign.__table__.delete())
+                await session.execute(Property.__table__.delete())
+                await session.execute(PropertyList.__table__.delete())
                 await session.execute(Contact.__table__.delete())
                 await session.execute(User.__table__.delete())
                 await session.commit()
@@ -201,11 +229,16 @@ async def db_session_commit(db_engine) -> AsyncGenerator[AsyncSession, None]:
         finally:
             # Clean up after transaction tests
             try:
-                from app.models import User, Contact, Campaign, Message, WebhookEvent
+                from app.models import User, Contact, Campaign, Message, WebhookEvent, Property, PropertyList
+                from app.models.property import contact_property_association
+                
                 # Delete all data created during the test
+                await session.execute(contact_property_association.delete())
                 await session.execute(Message.__table__.delete())
                 await session.execute(WebhookEvent.__table__.delete())
                 await session.execute(Campaign.__table__.delete())
+                await session.execute(Property.__table__.delete())
+                await session.execute(PropertyList.__table__.delete())
                 await session.execute(Contact.__table__.delete())
                 await session.execute(User.__table__.delete())
                 await session.commit()

@@ -7,6 +7,8 @@ from .contact import Contact
 from .campaign import Campaign, CampaignStatus
 from .message import Message, MessageStatus
 from .webhook_event import WebhookEvent
+from .property import Property
+from .list import List as PropertyList, ListStatus, ListSource
 
 __all__ = [
     "Base",
@@ -20,4 +22,8 @@ __all__ = [
     "Message",
     "MessageStatus",
     "WebhookEvent",
+    "Property",
+    "PropertyList",
+    "ListStatus",
+    "ListSource",
 ]

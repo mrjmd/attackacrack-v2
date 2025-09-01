@@ -16,6 +16,7 @@ from .base import BaseModel
 if TYPE_CHECKING:
     from .user import User
     from .message import Message
+    from .property import Property
 
 
 class Contact(BaseModel):
@@ -81,6 +82,14 @@ class Contact(BaseModel):
         "Message",
         back_populates="contact",
         cascade="all, delete-orphan"  # Delete messages when contact deleted
+    )
+    
+    # Many-to-many relationship with properties
+    properties: Mapped[List["Property"]] = relationship(
+        "Property",
+        secondary=lambda: __import__('app.models.property', fromlist=['contact_property_association']).contact_property_association,
+        back_populates="contacts",
+        lazy="select"  # Load properties when accessed
     )
     
     @validates('phone_number')
